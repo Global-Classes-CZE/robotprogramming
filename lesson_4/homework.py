@@ -2,17 +2,17 @@ from neopixel import NeoPixel
 from microbit import pin0
 from microbit import sleep
 
-zapni(poradi_led):
+def zapni(poradi_led):
     #TODO
 
-vypni(poradi_led):
+def vypni(poradi_led):
     #TODO
 
-nastav_barvu(poradi_led, barva):
+def nastav_barvu(poradi_led, barva):
     #TODO
 
 np = NeoPixel(pin0,8)
-#TODO: predelejte smycku tka, aby volala vyse definovane funkce
+#TODO: predelejte smycku tak, aby volala vyse definovane funkce
 while True:
     np[0] = (255,255,255) # nastavim prvni ledku, tzn [0] na bilou (RGB hodnoty)
     np.write()
