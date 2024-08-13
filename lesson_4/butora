@@ -1,0 +1,26 @@
+from neopixel import NeoPixel
+from microbit import pin0
+from microbit import sleep
+
+def zapni(poradi_led):
+    # input parameter je obsolete nakolko sa neda pouzit write metoda 
+    # sa pusta na classe NeoPixel
+    np.write()
+
+def vypni(poradi_led):
+    # input parameter je obsolete nakolko sa neda pouzit write metoda 
+    # sa pusta na classe NeoPixel
+    np.clear()
+
+def nastav_barvu(poradi_led, barva):
+    np[poradi_led] = barva
+
+np = NeoPixel(pin0, 8)
+
+while True:
+    nastav_barvu(0, (255, 255, 255))
+    zapni(0)
+    sleep(1000)
+    # nastav_barvu(0, (0, 0, 0))
+    vypni(0)
+    sleep(1000)
