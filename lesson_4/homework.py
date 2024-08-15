@@ -19,9 +19,8 @@ np = NeoPixel(pin0,8)
 poradi_led = 0
 barva_on = (255, 255, 255)
 barva_off = (0, 0, 0)
-prodleva_on = 1000
-prodleva_off = 1000
-
+prodleva_on = 1000 #ms
+prodleva_off = 1000 #ms
 
 while True:
     zapni(poradi_led, barva_on, prodleva_on)
