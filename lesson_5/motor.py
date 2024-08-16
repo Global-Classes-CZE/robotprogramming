@@ -30,10 +30,10 @@ class MotorController:
         motor = self.motors[key]
 
         if motor.position == "left":
-            motor.last_command = bytes([0x03])
+            motor.last_command = bytes([0x05])
             self.i2c_bus.write(self.i2c_address, motor.last_command + bytes([speed]))
         if motor.position == "right":
-            motor.last_command = bytes([0x05])
+            motor.last_command = bytes([0x03])
             self.i2c_bus.write(self.i2c_address, motor.last_command + bytes([speed]))
 
     def backwards(self, key: str, speed: int = 100):
