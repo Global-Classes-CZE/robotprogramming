@@ -1,3 +1,11 @@
+"""
+Soubor: motor.py
+
+Autor: Alexandr Ulybin
+
+Popis:
+Nepovinný domácí úkol Lekce 5 z live codingu, zadání vytvoření konceptu objektu motoru a jeho řízení pomocí implementace I2C sběrnice
+"""
 from microbit import i2c
 from microbit import sleep
 
