@@ -1,6 +1,8 @@
 from microbit import i2c
 from microbit import sleep
 from microbit import button_a
+from microbit import pin14
+from microbit import pin15
 
 DEBUG = True
 
@@ -35,9 +37,17 @@ def precti_senzory():
     #na nasi stavebnici, kazdy ze senzoru vraci jen True/False, tzn 1 bit
     #mame celkove 7 senzoru pripojenych do IO expanderu, tzn chceme vycist 7 bitu
     #minimalni mnozstvi, ktere muzeme vycist je ale v bytech, tzn je to 1byte, coz je 8 bitu
+    #i2c.write(0x38, bytes([0xFF,]))
+
+    signal_pin14 = pin14.read_digital()
+    signal_pin15 = pin15.read_digital()
+
     surova_data_byte = i2c.read(0x38, 1)
+    # surova_data_byte = bytes([128])
     if DEBUG:
         print("surova data", surova_data_byte)
+        print("Pin14:", signal_pin14)
+        print("Pin15:", signal_pin15)
 
     #chceme prevest vycteny byte na bity, abychom se dostali k informaci ze senzoru
     bitove_pole = byte_na_bity(surova_data_byte)
@@ -55,14 +65,15 @@ def precti_senzory():
     #experimentalne jsem overila, ze v bitove_poli to ale neodpovida polozce [0], ale naopak te nejvice v pravo
     #bitove_pole neni jen 8 bitu, ale je to ve tvaru 0b<nasich_bitu>, tzn to musim jeste o 2 pozice posunout
 
-    senzoricka_data["levy_enkoder"] = bitove_pole[9]
-    senzoricka_data["pravy_enkoder"] = bitove_pole[8]
+    senzoricka_data["levy_enkoder"] = signal_pin14
+    senzoricka_data["pravy_enkoder"] = signal_pin15
     senzoricka_data["levy_sledovac_cary"] = bitove_pole[7]
     senzoricka_data["prostredni_sledovac_cary"] = bitove_pole[6]
     senzoricka_data["pravy_sledovac_cary"] = bitove_pole[5]
     senzoricka_data["levy_IR"] = bitove_pole[4]
     senzoricka_data["pravy_IR"] = bitove_pole[3]
     #pripominka - my mame jen 7 senzoru, ale vycetli jsme 1 byte, tzn 8. bit na pozici [2] je nejaky "duch", o ktery nam tu nejde
+    #    ale musi byt v hodnote 1 jinak ta funkce nefunguje spravne - zatim je
     #pozice [1] je pismeno "b", o tom nam taky nejde
     #pozice [0] je vzdy 0, taky nam o to nejde
 
@@ -85,7 +96,7 @@ def enkoder_signal(jmeno_enkoderu):
 if __name__ == "__main__":
 
     #puste si kod a jemne si levy kolem pohybujte, meli byste videt, ze se meni kdy levy enkoder vidi a nevidi
-    DEBUG = False #nastavte na True pokud chcete videt pomocne vypisy
+    DEBUG = True #nastavte na True pokud chcete videt pomocne vypisy
 
     i2c.init(freq=400000)
     while not button_a.was_pressed():
