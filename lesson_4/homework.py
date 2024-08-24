@@ -1,23 +1,37 @@
 from neopixel import NeoPixel
-from microbit import pin0
-from microbit import sleep
+from microbit import pin0, sleep, button_a
+
+
+np = NeoPixel(pin0, 8)
+
 
 def zapni(poradi_led):
-    #TODO
+    np[poradi_led] = (0, 255, 0)
+    np.write()
+
 
 def vypni(poradi_led):
-    #TODO
+    np[poradi_led] = (0, 0, 0)
+    np.write()
+
 
 def nastav_barvu(poradi_led, barva):
-    #TODO
+    np[poradi_led] = barva
+    np.write()
 
-np = NeoPixel(pin0,8)
-#TODO: predelejte smycku tak, aby volala vyse definovane funkce
-while True:
-    np[0] = (255,255,255) # nastavim prvni ledku, tzn [0] na bilou (RGB hodnoty)
-    np.write()
-    sleep(1000)
-    np[0] = (0,0,0) # nastavim prvni ledku, tzn [0] na cernou (RGB hodnoty)
-    np.write()
-    sleep(1000)
+
+while not button_a.is_pressed():
+    zapni(0)
+    sleep(500)
+    vypni(0)
+    sleep(500)
+    zapni(2)
+    sleep(500)
+    vypni(2)
+    sleep(500)
+    nastav_barvu(0, (255, 0, 0))
+    sleep(500)
+    vypni(0)
+    sleep(500)
+
 
