@@ -1,34 +1,50 @@
-from microbit import i2c
-from microbit import sleep
+from microbit import i2c, sleep
 
-# Motor je typu string a muze mit hodnoty “pravy” a “levy”
-# Smer je typu string a muze mit hodnoty “dopredu”, “dozadu”
-# Rychlost je celociselne cislo od 0-255
-# Napoveda: budete potrebovat podminky if/else v kodu
 def jed(motor, smer, rychlost):
-    # TODO
+    if motor == "pravy":
+        if smer == "dopredu":
+            i2c.write(0x70, b"\x03" + bytes([rychlost]))
+        elif smer == "dozadu":
+            i2c.write(0x70, b"\x02" + bytes([rychlost]))
+        else:
+            raise ValueError("Neplatny vstup")
+    elif motor == "levy":
+        if smer == "dopredu":
+            i2c.write(0x70, b"\x05" + bytes([rychlost]))
+        elif smer == "dozadu":
+            i2c.write(0x70, b"\x04" + bytes([rychlost]))
+        else:
+            raise ValueError("Neplatny vstup")
+    else:
+        raise ValueError("Neplatny vstup")
 
-# Motor je typu string a muze mit hodnoty “pravy” a “levy”
 def zastav(motor):
-    # TODO
+    if motor == "pravy":
+        jed("pravy", "dopredu", 0)
+        jed("pravy", "dozadu", 0)
+    elif motor == "levy":
+        jed("levy", "dopredu", 0)
+        jed("levy", "dozadu", 0)
+    else:
+        raise ValueError("Neplatny vstup")
 
 if __name__ == "__main__":
-    i2c.init(freq=100000)
-
-    # probud cip motoru
+    i2c.init(100000)
     i2c.write(0x70, b"\x00\x01")
     i2c.write(0x70, b"\xE8\xAA")
 
-    # TODO predelelejte tento kod, aby robot jel 1s vpred
-    # pak zastavil na 1s
-    # pak se rozjel vzad po dobu 1s
-    # a pak zastavil a kod se vypnul
-    # 0x02, 0x03
-    # 0-255
-    sleep(100)
-    i2c.write(0x70, b"\x05" + bytes([135]))
-    sleep(2000)
-    i2c.write(0x70, b"\x02" + bytes([0]))
-    i2c.write(0x70, b"\x03" + bytes([0]))
-    i2c.write(0x70, b"\x04" + bytes([0]))
-    i2c.write(0x70, b"\x05" + bytes([0]))
+    jed("pravy", "dopredu", 135)
+    jed("levy", "dopredu", 135)
+    sleep(1000)
+
+    zastav("pravy")
+    zastav("levy")
+    sleep(1000)
+
+    jed("pravy", "dozadu", 135)
+    jed("levy", "dozadu", 135)
+    sleep(1000)
+
+    zastav("pravy")
+    zastav("levy")
+    sleep(1000)
