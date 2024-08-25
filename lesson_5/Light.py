@@ -28,7 +28,7 @@ class Color:
 class Light:
 
     FRONT = Front()
-    BACK = Front()
+    BACK = Back()
 
     def __init__(self):
         self.np = NeoPixel(pin0, 8)
