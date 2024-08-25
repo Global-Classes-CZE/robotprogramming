@@ -1,4 +1,5 @@
 from microbit import i2c
+from microbit import i2c
 from microbit import sleep
 from microbit import button_a
 
@@ -97,6 +98,7 @@ if __name__ == "__main__":
     DEBUG = False  # nastavte na True pokud chcete videt pomocne vypisy
 
     i2c.init(freq=400000)
+
     while not button_a.was_pressed():
         data = enkoder_signal("levy_enkoder")
         if data == 1:
