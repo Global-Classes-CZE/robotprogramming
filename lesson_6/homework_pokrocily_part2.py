@@ -1,33 +1,24 @@
-from microbit import sleep
-from microbit import pin14
-from microbit import pin15
 from microbit import button_a
-
-tiky = 0  # globalni promena
-
-def enkoder_signal(jmeno_enkoderu):
-    if jmeno_enkoderu == "pravy_enkoder":
-        return int(pin15.read_digital())
-    elif jmeno_enkoderu == "levy_enkoder":
-        return int(pin14.read_digital())
-    else:
-        print("Zadali jste nepodporovane jmeno")
-        return -1
-
-def pocet_tiku(jmeno_enkoderu):
-    # TODO volejte funkce enkoder_signal a pocitejte nove tiky
-
-    return tiky
+from microbit import button_b
+from WheelDriver import WheelDriver
+import time
 
 if __name__ == "__main__":
+    # Pocitejte nove tiky pro leve a prave kolo
 
-   # misto vypisu vidi/nevidi vypisujte tiky
-    while not button_a.was_pressed():
-        data_enkoderu = enkoder_signal("levy_enkoder")
-        if data_enkoderu == 1:
-            print("levy enkoder vidi")
-        elif data_enkoderu == 0:
-            print("levy enkoder nevidi")
-        else:
-            print("jsem tululum a upsala jsem se nekde v nazvu enkoderu :)")
-        sleep(100)
+    # Reseni pouziva aktivni rychle tikajici smycku, ktera se zastavi tlacitkem B
+    # a vypise vysledky tlacitkem A. Smycka pouziva non-blocking cteni senzoru
+    # pri update stavu kazdeho kola.
+    wheel_driver = WheelDriver()
+    wheel_driver.move(100, 150)  # nerovnomerny pohyb (at je co sbirat)
+    phase_length = 1000  # kazdou sekundu vypiseme po testu tlacitkem
+    phase_start = time.ticks_ms()
+    while not button_b.was_pressed():
+        if time.ticks_diff(time.ticks_ms(), phase_start) > phase_length:
+            phase_start = time.ticks_ms()
+            while button_a.was_pressed():
+                (levy_encoder, pravy_encoder) = wheel_driver.get_ticks()
+                print("levy enc: %d, pravy enc: %d" % (levy_encoder, pravy_encoder))
+        wheel_driver.update()
+        time.sleep(0.01)
+    print("Finished")
