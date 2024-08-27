@@ -8,6 +8,7 @@ class SpeedTicks:
     LIMIT = const(101)                                      # pocet desetin pro ktere si pamatujeme hodnoty
 
     def __init__(self):
+        self.countValues = 0
         self.times = [0] * self.LIMIT
         self.ticks = [0] * self.LIMIT
         self.index = 0
@@ -20,78 +21,89 @@ class SpeedTicks:
             return -1                                       # jinak vratime -1 (nemame novy index = musime jeste pockat)
 
     def nextValues(self, newIndex, time, ticks):            # Ulozime nove hodnoty do pole
+        if self.countValues < self.LIMIT:                   # jeste nemame vsechny hodnoty pole zaplnene?
+            self.countValues += 1                           # ano -> pricteme ze mame dalsi hodnotu
         self.index = newIndex                               # zapamatujeme si novy index
         self.times[self.index] = time                       #  ulozime cas do tohoto indexu
         self.ticks[self.index] = ticks                      #  ulozime tiky do tohoto indexu
 
-    def run(self, ticks):                                   # Nech nas pracovat
+    def run(self, ticks):                                   # Nech nas pracovat. Musime volat dostatecne casto (minimalne jednou za desetinu sekundy)
         time = ticks_ms()                                   # precteme cas v ms
         newIndex = self.getNewIndex(time)                   # spocti novy index z casu
         if newIndex >= 0:                                   # mame novy index?
             self.nextValues(newIndex, time, ticks)          # ano -> ulozime nove hodnoty pro tento index
 
-    def calculate(self, pocetDesetin=10):                   # Spocti rychlost tiku (tick/s), pouzij k tomu data stara "pocet desetin"
-        if pocetDesetin<1 or pocetDesetin>=self.LIMIT:      # je hodnota pocetDesetin vyhovujici (budeme ji umet spocitat)?
-            pocetDesetin = 10                               # ne -> nahrad ji implicitni hodnotou
-        newIndex = self.index                               # pro jistotu si vezmeme aktuali index do lokalni promenne (aby se nam pod rukama nezmenil)
-        oldIndex = (newIndex - pocetDesetin) % self.LIMIT   # spocteme index pro data pred "poctem desetin"
-        diffTimes = self.times[newIndex] - self.times[oldIndex] # spocti rozdil tiku za cca pocetDesetin
-        diffTicks = self.ticks[newIndex] - self.ticks[oldIndex] # spocti rozdil casu za cca pocetDesetin
+    def calculate(self, countTenths=10):                    # Spocti rychlost tiku (tick/s), pouzij k tomu data dlouha countTenths (desetin sekundy)
+        if countTenths<1 or countTenths>=self.countValues:  # je hodnota pocetDesetin vyhovujici (budeme ji umet spocitat)?
+            if self.countValues < 2:                        # ne    mame alespon 2 hodnoty pro spocteni rychlosti?
+                return 0                                    #       ne -> vratime rychlost 0 (jsme na zacatku a snad nikam nejedeme)
+            else:
+                if self.countValues >= 10:                  #       mame alespon 10 hodnot?
+                    countTenths = 10                        #           ano -> nahradime nevhodnou delku implicitni hodnotou 10
+                else:
+                    countTenths = self.countValues          # ne  -> nahradime delku maximalni moznou (kolik mame dat)
+        endIndex = self.index                               # koncovy index pro data (kde konci casove okno)
+        startIndex = (endIndex - countTenths) % self.LIMIT  # spocteme pocatecni index (pro data pred lengt "desetinami")
+        diffTimes = self.times[endIndex] - self.times[startIndex] # spocti rozdil tiku za cca pocetDesetin
+        diffTicks = self.ticks[endIndex] - self.ticks[startIndex] # spocti rozdil casu za cca pocetDesetin
         return 1000 * diffTicks / diffTimes                 # rychlost = pocet tiku za 1s (tj. za 1000ms)
 
 class Ticks:
-    UP = const(1)                       # smer nahoru = pricitame(kolo se toci dopredu)
-    DOWN = const(2)                     # smer dolu = odecitame (kole se toci dozadu)
+    UP = const(1)                                           # smer nahoru = pricitame(kolo se toci dopredu)
+    DOWN = const(2)                                         # smer dolu = odecitame (kole se toci dozadu)
 
     def __init__(self, pin):
-        self.pin = pin                                  # pin na kterem budeme sledovat tiky
-        self.actualPinValue = self.readPin()            # precteme aktualni hodnotu na pinu
-        self.lastPinValue = self.actualPinValue         #   a ulozime si ji i jako lastValue
-        self.count = 0                                  # pocet tiku (od zacateku)
-        self.setDirection(self.UP)                      # smer pocitani (pricitat/odecitat)
-        self.speed = SpeedTicks()                       # objekt ktery umi spociat rychlost
+        self.pin = pin                                      # pin na kterem budeme sledovat tiky
+        self.actualPinValue = self.readPin()                # precteme aktualni hodnotu na pinu
+        self.lastPinValue = self.actualPinValue             #   a ulozime si ji i jako lastValue
+        self.count = 0                                      # pocet tiku (od zacateku)
+        self.setDirection(self.UP)                          # smer pocitani (pricitat/odecitat)
+        self.speed = SpeedTicks()                           # objekt ktery umi spociat rychlost
 
-    def readPin(self):                                  # Precti hodnotu na pinu
+    def readPin(self):                                      # Precti hodnotu na pinu
         return self.pin.read_digital()
 
-    def setDirection(self, value):                      # Nastav smer
+    def setDirection(self, value):                          # Nastav smer
         self.direction = value
 
-    def getCount(self):                                 # Dej mi celkovy pocet
+    def getCount(self):                                     # Dej mi celkovy pocet
         return self.count
 
-    def nextTick(self):                                 # Dalsi tik
-        if self.direction == self.UP:                   # Mame pocitat nahoru (pricitat)?
-            self.count += 1                             # ano -> pricti 1
+    def nextTick(self):                                     # Dalsi tik
+        if self.direction == self.UP:                       # Mame pocitat nahoru (pricitat)?
+            self.count += 1                                 # ano -> pricti 1
         else:
-            self.count -= 1                             # ne -> odecti 1
+            self.count -= 1                                 # ne -> odecti 1
 
-    def getSpeed_InTick(self, pocetDesetin=10):         # Dej mi rychlost spocitanou z dat starych "pocetDesetin"
-        return self.speed.calculate(pocetDesetin)
+    def getSpeed_InTick(self, countTenths=10):              # Dej mi rychlost spocitanou z dat starych "pocet desetin sekundy"
+        return self.speed.calculate(countTenths)
 
-    def getSpeed_InRad(self, pocetDesetin=10):          # Dej mi rychlost spocitanou z dat starych "pocetDesetin"
-        return self.getSpeed_InTick(pocetDesetin) / ROBOT_TicksPerCircle * 6.28
+    def getSpeed_InRad(self, countTenths=10):               # Dej mi rychlost spocitanou z dat starych "pocet desetin sekundy"
+        return self.getSpeed_InTick(countTenths) / ROBOT_TicksPerCircle * 6.28
 
-    def run(self):                                      # Merici funkce, musi se volat dostatecne casto (minimalne jednou za desetinu sekundy)
-        self.actualPinValue = self.readPin()            # Precti pin, ktery kontrolujeme
-        if self.actualPinValue != self.lastPinValue:    # Nastala zmena hodnoty pinu?
-            self.nextTick()                             # ano -> zapocitec dalsi ticks
-            self.lastPinValue = self.actualPinValue     #        a zapamatujeme se zmenenou hodnotu
-        self.speed.run(self.getCount())                 # nech i objektu rychlost moznost pracovat
+    def rychlost_otaceni(self):                             # Jmeno funkce pozadovane zadanim
+        return self.getSpeed_InRad()
+
+    def run(self):                                          # Merici funkce, musi se volat dostatecne casto (rychleji nez nastavaji zmeny na pin-u)
+        self.actualPinValue = self.readPin()                # Precti pin, ktery kontrolujeme
+        if self.actualPinValue != self.lastPinValue:        # Nastala zmena hodnoty pinu?
+            self.nextTick()                                 # ano -> zapocitec dalsi ticks
+            self.lastPinValue = self.actualPinValue         #        a zapamatujeme se zmenenou hodnotu
+        self.speed.run(self.getCount())                     # nech i objektu rychlost moznost pracovat
 
 def main():
-    levy = Ticks(pin14)
-    pravy = Ticks(pin15)
+    leftSpeedSenzor = Ticks(pin14)
+    rightSpeedSenzor = Ticks(pin15)
     while True:
         for i in range(100):
-            levy.run()                  # musime volat dostatecne casto
-            pravy.run()
+            leftSpeedSenzor.run()                           # merici funkci musime volat dostatecne casto
+            rightSpeedSenzor.run()
             sleep(10)
         # Zobrazime rychlost
         print(
             "Rychlost:",
-            "leve kolo=", levy.getSpeed_InRad(10), "rad/s",
-            "prave kolo=", pravy.getSpeed_InRad(10), "rad/s",
+            "leve kolo=", leftSpeedSenzor.rychlost_otaceni(), "rad/s",
+            "prave kolo=", rightSpeedSenzor.rychlost_otaceni(), "rad/s",
         )
 
 if __name__ == "__main__" :
