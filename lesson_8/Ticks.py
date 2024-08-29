@@ -46,7 +46,9 @@ class SpeedTicks:
         startIndex = (endIndex - countTenths) % self.LIMIT  # spocteme pocatecni index (pro data pred lengt "desetinami")
         diffTimes = self.times[endIndex] - self.times[startIndex] # spocti rozdil tiku za cca pocetDesetin
         diffTicks = self.ticks[endIndex] - self.ticks[startIndex] # spocti rozdil casu za cca pocetDesetin
-        return 1000 * diffTicks / diffTimes                 # rychlost = pocet tiku za 1s (tj. za 1000ms)
+        speed = 1000 * diffTicks / diffTimes                # rychlost = pocet tiku za 1s (tj. za 1000ms)
+        print(diffTimes, diffTicks, speed)
+        return speed
 
 class Ticks:
     UP = const(1)                                           # smer nahoru = pricitame(kolo se toci dopredu)
@@ -78,8 +80,11 @@ class Ticks:
     def getSpeed_InTick(self, countTenths=10):              # Dej mi rychlost spocitanou z dat starych "pocet desetin sekundy"
         return self.speed.calculate(countTenths)
 
+    def getSpeed_InCycle(self, countTenths=10):               # Dej mi rychlost spocitanou z dat starych "pocet desetin sekundy"
+        return self.getSpeed_InTick(countTenths) / ROBOT_TicksPerCircle
+
     def getSpeed_InRad(self, countTenths=10):               # Dej mi rychlost spocitanou z dat starych "pocet desetin sekundy"
-        return self.getSpeed_InTick(countTenths) / ROBOT_TicksPerCircle * 6.28
+        return self.getSpeed_InCycle(countTenths) * 6.28
 
     def rychlost_otaceni(self):                             # Jmeno funkce pozadovane zadanim
         return self.getSpeed_InRad()
@@ -99,42 +104,53 @@ class Engine:
         i2c.init(freq=400000)
         sleep(100)
         #probud cip motoru
-        i2c.write(112, bytes([0x00, 0x01])
-        i2c.write(112, bytes([0xE8, 0xAA])
+        i2c.write(0x70, bytes([0x00, 0x01]))
+        i2c.write(0x70, bytes([0xE8, 0xAA]))
 
-    def jed_PWM(self, smer, PWM):
+    def jed_PWM(self, smer, pwm):
+        num = 0
         if(self.jmeno == "levy"):
             if(smer=="dopredu"):
-                i2c.write(0x70, b"\x05" + bytes([PWM]))
-                return 0
+                num = 5
+            if(smer=="dozadu"):
+                num = 4
+        if(self.jmeno == "pravy"):
+            if(smer=="dopredu"):
+                num = 3
+            if(smer=="dozadu"):
+                num = 2
+        if num > 0:
+            i2c.write(0x70, bytes([num, pwm]))
+            return 0
         return -1
 
     def run(self):
         self.encoder.run()
 
+def merime(pwm):
+    global leftEngine
+
+    leftEngine.jed_PWM("dopredu", pwm)                      # nastavime hodnotu PWM
+    for i in range(400):                                    # pockame 0,7s po zmene rychlosti ale budeme porad merit rychlost
+        leftEngine.run()                                    # merici funkci musime volat dostatecne casto
+        sleep(1)
+
+    rychlost = leftEngine.encoder.getSpeed_InCycle(3)       # spocteme rychlost z 5 desetin sekundy
+#    print( (rychlost, pwm, ) )
+
 def main():
+    global leftEngine
+
+    print("Zacina program")
     leftEngine = Engine("levy", pin14)
-    speedUp = [0] * self.256
-    speedDown = [0] * self.256
-#    rightEngine = Engine("pravy", pin15)
+
+    print("Zrychlujeme.")
     for pwm in range(256):
-        leftEngine.jed_PWM("dopredu", pwm)              # nastavime hodnotu PWM
-        for i in range(150):                            # pockame 1s pred zmenou rychlost ale budeme porad merit rychlost
-            leftEngine.run()                            # merici funkci musime volat dostatecne casto
-            sleep(10)
-        speedUp[pwm] = leftEngine.encoder.getSpeed_InRad()
+        merime(pwm)
 
+    print("Zpomalujeme.")
     for pwm in range(256):
-        leftEngine.jed_PWM("dopredu", 255-pwm)          # nastavime hodnotu PWM sestupne
-        for i in range(150):                            # pockame 1s pred zmenou rychlost ale budeme porad merit rychlost
-            leftEngine.run()                            # merici funkci musime volat dostatecne casto
-            sleep(10)
-        speedDwon[255-pwm] = leftEngine.encoder.getSpeed_InRad()
-
-    for pwm in range(256):
-        print((pwm, speedUp[pwm]))
-
-
+        merime(255-pwm)
 
 if __name__ == "__main__" :
     main()
