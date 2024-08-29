@@ -52,6 +52,6 @@ class WheelDriver:
         """Returns the current speed of the robot."""
         return self.wheel_left.speed, self.wheel_right.speed
 
-    def get_ticks(self):
-        """Returns the current ticks of the robot."""
-        return self.wheel_left.tick_counter, self.wheel_right.tick_counter
+    def get_tachometer(self):
+        """Returns the left and right tachometer of the robot's wheels."""
+        return self.wheel_left.tachometer, self.wheel_right.tachometer
