@@ -17,7 +17,8 @@ class Enkoder:
         self.__senzory = Senzory()
 
     def inicializuj(self):
-        self.__posledni_hodnota = self.vycti_aktualni_hodnotu()
+        senzoricka_data = self.__senzory.precti_senzory()
+        self.__posledni_hodnota = senzoricka_data[self.__jmeno]
 
     def vycti_aktualni_hodnotu(self):
         senzoricka_data = self.__senzory.precti_senzory()
