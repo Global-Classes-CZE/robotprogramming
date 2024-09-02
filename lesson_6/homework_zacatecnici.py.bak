@@ -57,7 +57,7 @@ class Motor:
             i2c.write(i2cControllerAddress, bytes([pravyMotorDozadu]) + bytes([0]))
 
 if __name__ == "__main__":
-    i2c.init(freq=100000)
+    i2c.init(freq=400000)
 
     # probud cip motoru
     i2c.write(0x70, b"\x00\x01")
