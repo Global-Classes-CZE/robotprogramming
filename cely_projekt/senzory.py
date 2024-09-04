@@ -1,5 +1,7 @@
 from microbit import i2c
 
+from konstanty import Konstanty
+
 class Senzory:
 
     # konstruktor
@@ -47,14 +49,14 @@ class Senzory:
         # tzn to musim jeste o 2 pozice posunout
 
         if not self.nova_verze:
-            senzoricka_data["levy_enkoder"] = bitove_pole[9]
-            senzoricka_data["pravy_enkoder"] = bitove_pole[8]
+            senzoricka_data[Konstanty.LV_ENKODER] = bitove_pole[9]
+            senzoricka_data[Konstanty.PR_ENKODER] = bitove_pole[8]
 
-        senzoricka_data["levy_sledovac_cary"] = bitove_pole[7]
-        senzoricka_data["prostredni_sledovac_cary"] = bitove_pole[6]
-        senzoricka_data["pravy_sledovac_cary"] = bitove_pole[5]
-        senzoricka_data["levy_IR"] = bitove_pole[4]
-        senzoricka_data["pravy_IR"] = bitove_pole[3]
+        senzoricka_data[Konstanty.LV_S_CARY] = bitove_pole[7]
+        senzoricka_data[Konstanty.PROS_S_CARY] = bitove_pole[6]
+        senzoricka_data[Konstanty.PR_S_CARY] = bitove_pole[5]
+        senzoricka_data[Konstanty.LV_IR] = bitove_pole[4]
+        senzoricka_data[Konstanty.PR_IR] = bitove_pole[3]
         # pripominka - my mame jen 7 senzoru, ale vycetli jsme 1 byte,
         # tzn 8. bit na pozici [2] je nejaky "duch", o ktery nam tu nejde
         # pozice [1] je pismeno "b", o tom nam taky nejde
