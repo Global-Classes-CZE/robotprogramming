@@ -1,9 +1,12 @@
 from microbit import i2c
+from microbit import sleep
+from utime import ticks_us, ticks_diff
 
-import Konstanty
+from konstanty import Konstanty
+from enkoder import Enkoder
 
 class Motor:
-    def __init__(self, jmeno, prumer_kola):
+    def __init__(self, jmeno, prumer_kola, nova_verze=True, debug=False):
         if jmeno == Konstanty.LEVY:
             self.__kanal_dopredu = b"\x05"
             self.__kanal_dozadu = b"\x04"
@@ -13,19 +16,37 @@ class Motor:
         else:
             raise AttributeError("spatne jmeno motoru, musi byt \"levy\" a nebo \"pravy\", zadane jmeno je" + str(jmeno))
 
+        self.__DEBUG = debug
         self.__jmeno = jmeno
         self.__prumer_kola = prumer_kola
-        self.__enkoder = Enkoder(jmeno + "_enkoder")
+        self.__enkoder = Enkoder(jmeno + "_enkoder", 1, nova_verze, debug)
         self.__smer = Konstanty.NEDEFINOVANO
         self.__inicializovano = False
         self.__rychlost_byla_zadana = False
+        self.__min_pwm = 0
+        self.__perioda_regulace = 1000000 #v microsekundach
+        self.__cas_posledni_regulace = 0
 
     def inicializuj(self):
-         self.enkoder.inicializuj()
-         # probud cip motoru
+        # self.enkoder.inicializuj()
+        # probud cip motoru
         i2c.write(0x70, b"\x00\x01")
         i2c.write(0x70, b"\xE8\xAA")
+
+        self.__enkoder.inicializuj()
+
+        if self.__jmeno == Konstanty.LEVY:
+            self.__limity = [4.705, 12.37498]
+            self.__primky_par_a = [17.07965]
+            self.__primky_par_b = [28.63963]
+        else:
+            self.__limity = [4.520269, 8.57154]
+            self.__primky_par_a = [20.98109]
+            self.__primky_par_b = [60.15985]
+
         self.__inicializovano = True
+
+        self.__cas_posledni_regulace = ticks_us()
 
     def kalibrace(self):
         """
@@ -34,14 +55,47 @@ class Motor:
         if not self.__inicializovano:
             return -1
 
-        # TODO naimplementuj
+        hodnoty = [0]*256
+        self.__smer = Konstanty.DOPREDU
 
-        # TODO jine parametery!! tyhle jsou pro uhlovou rcyhlost v ot/s,
-        # ja potrebuji rad/s
+        navratova_hodnota = 0
 
-        self.__limity = [0.675, 2.15]
-        self.__primky_par_a = [94.915]
-        self.__primky_par_b = [35.932]
+        for pwm in range(256):
+            navratova_hodnota = self.__jed_PWM(pwm)
+            if navratova_hodnota != 0:
+                print("chyba v __jed_PWM", navratova_hodnota)
+                break
+
+            cas_minule = ticks_us()
+            cas_ted = cas_minule
+
+            while ticks_diff(cas_ted, cas_minule) < 1000000:
+                cas_ted = ticks_us()
+                navratova_hodnota = self.__enkoder.aktualizuj_se()
+                if navratova_hodnota < 0:
+                    print("chyba v enkoder aktualizuj_se", navratova_hodnota)
+                    break
+                sleep(5)
+
+
+            if navratova_hodnota < 0:
+                break
+
+            aktualni_rychlost = self.__enkoder.vypocti_rychlost()
+            if aktualni_rychlost > 0 and self.__min_pwm == 0:
+                self.__min_pwm = pwm
+
+            hodnoty[pwm] = aktualni_rychlost
+            print(aktualni_rychlost, pwm, sep=";")
+
+        navratova_hodnota = self.__jed_PWM(0)
+        self.__smer = Konstanty.NEDEFINOVANO
+
+        # TODO udelej kalibraci automaticky
+
+        self.__limity = [4.705, 12.37498]
+        self.__primky_par_a = [17.07965]
+        self.__primky_par_b = [28.63963]
         return 0
 
     def jed_doprednou_rychlosti(self, v: float):
@@ -51,13 +105,18 @@ class Motor:
         if not self.__inicializovano:
             return -1
 
-        self.__pozadovana_uhlova_r_kola = dopredna_na_uhlovou(v)
+        self.__pozadovana_uhlova_r_kola = self.__dopredna_na_uhlovou(v)
+        if self.__DEBUG:
+            print("pozadovana uhlova", self.__pozadovana_uhlova_r_kola)
+
         self.__rychlost_byla_zadana = True
 
         # pouziji funkci abs pro vypocteni absolutni hodnoty
         # PWM je vzdy pozitivni
         # znamenko uhlove rychlosti ovlivni smer
-        prvni_PWM = uhlova_na_PWM(abs(self.__pozadovana_uhlova_r_kola))
+        prvni_PWM = self.__uhlova_na_PWM(abs(self.__pozadovana_uhlova_r_kola))
+        if self.__DEBUG:
+            print("prvni_PWM", prvni_PWM)
 
         if self.__pozadovana_uhlova_r_kola > 0:
             self.__smer = Konstanty.DOPREDU
@@ -74,7 +133,7 @@ class Motor:
         """
         Prepocita doprednou rychlost kola na uhlovou
         """
-        return v/self.__prumer_kola/2
+        return v/(self.__prumer_kola/2)
 
     def __uhlova_na_PWM(self, uhlova):
         """
@@ -86,7 +145,7 @@ class Motor:
 
     def __najdi_spravne_parametery(self, uhlova):
         # TODO
-        return a[0], b[0]
+        return self.__primky_par_a[0], self.__primky_par_b[0]
 
     # DU 5 pokrocily/DU 7 zacatecnici
     # jed(motor, smer, rychlost)
@@ -102,7 +161,7 @@ class Motor:
             else:
                 je_vse_ok = -1
         else:
-            je_vse_ok = -1
+            je_vse_ok = -3
 
         return je_vse_ok
 
@@ -113,8 +172,19 @@ class Motor:
         self.__PWM = PWM
         return 0
 
+    def aktualizuj_se(self):
+        self.__enkoder.aktualizuj_se()
+        cas_ted = ticks_us()
+        cas_rozdil = ticks_diff(cas_ted, self.__cas_posledni_regulace)
+        navratova_hodnota = 0
+        if cas_rozdil > self.__perioda_regulace:
+            navratova_hodnota = self.__reguluj_otacky()
+            self.__cas_posledni_regulace = cas_ted
+
+        return navratova_hodnota
+
     # ukazka v pridanem materialu k hodine 8
-    def reguluj_otacky(self):
+    def __reguluj_otacky(self):
 
         if not self.__inicializovano:
             return -1
@@ -122,9 +192,9 @@ class Motor:
         if not self.__rychlost_byla_zadana:
             return -2
 
-        P = 30 # TODO tohle bude jine, protoze otacky budou v radianech!
+        P = 6
 
-        aktualni_rychlost = self.enkoder.vypocti_rychlost()
+        aktualni_rychlost = self.__enkoder.vypocti_rychlost()
         # aktualni_rychlost bude vzdy pozitivni
         # musim tedy kombinovat se smerem, kterym se pohybuji
         if self.__pozadovana_uhlova_r_kola < 0:
