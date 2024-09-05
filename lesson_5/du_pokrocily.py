@@ -1,4 +1,4 @@
-from microbit import i2c
+from microbit import i2c, sleep
 
 def nastav_PWM_kanaly(kanal_on, kanal_off, rychlost):
     i2c.write(0x70, kanal_off + bytes([0]))
