@@ -2,6 +2,7 @@ from microbit import sleep
 from microbit import pin14
 from microbit import pin15
 from microbit import button_a
+from time import ticks_ms, ticks_diff
 
 tiky = 0  # globalni promena
 
@@ -15,19 +16,30 @@ def enkoder_signal(jmeno_enkoderu):
         return -1
 
 def pocet_tiku(jmeno_enkoderu):
-    # TODO volejte funkce enkoder_signal a pocitejte nove tiky
-
+    zacatek_mereni = ticks_ms()
+    cas_mereni_ms = 1000
+    poslední_signal = 0
+    novy_signal = 0
+    tiky = 0
+    
+    while ticks_diff(ticks_ms(), zacatek_mereni) < cas_mereni_ms:
+        novy_signal = enkoder_signal(jmeno_enkoderu)
+        
+        if poslední_signal != novy_signal:
+            tiky += 1
+            poslední_signal = novy_signal
+            
+    
+        # TODO volejte funkce enkoder_signal a pocitejte nove tiky
+    
+    print("aktuální tiky: ", tiky)
+    
     return tiky
 
 if __name__ == "__main__":
 
    # misto vypisu vidi/nevidi vypisujte tiky
     while not button_a.was_pressed():
-        data_enkoderu = enkoder_signal("levy_enkoder")
-        if data_enkoderu == 1:
-            print("levy enkoder vidi")
-        elif data_enkoderu == 0:
-            print("levy enkoder nevidi")
-        else:
-            print("jsem tululum a upsala jsem se nekde v nazvu enkoderu :)")
-        sleep(100)
+        pocet_tiku("levy_enkoder")
+        sleep(2000)
+
