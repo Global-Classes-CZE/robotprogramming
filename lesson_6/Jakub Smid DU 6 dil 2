@@ -18,7 +18,7 @@ def enkoder_signal(jmeno_enkoderu):
 def pocet_tiku(jmeno_enkoderu):
     zacatek_mereni = ticks_ms()
     cas_mereni_ms = 1000
-    poslední_signal = 0
+    poslední_signal = enkoder_signal(jmeno_enkoderu)
     novy_signal = 0
     tiky = 0
     
