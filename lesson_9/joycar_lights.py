@@ -68,15 +68,21 @@ def lightsIndicator(direction, last_ind_act):
 
 while True:
     # Application example
-    lightsON()  #Light on
+    print("lightsON")
+    lightsON()  # Light on
     sleep(1000)
-    lightsBreakON()  #Brake light on
+    print("lightsBreakON")
+    lightsBreakON()  # Brake light on
     sleep(1000)
-    lightsBreakOFF()  #Brake light off
+    print("lightsBreakOFF")
+    lightsBreakOFF()  # Brake light off
     sleep(1000)
-    lightsBackON()  #Reversing lights on
+    print("lightsBackON")
+    lightsBackON()  # Reversing lights on
     sleep(1000)
-    lightsBackOFF()  #Reversing lights off
+    print("lightsBackOFF")
+    lightsBackOFF()  # Reversing lights off
     sleep(1000)
-    lightsOFF()  #Light off
+    print("lightsOFF")
+    lightsOFF()  # Light off
     sleep(1000)
