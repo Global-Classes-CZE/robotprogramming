@@ -1,84 +1,82 @@
-from microbit import i2c
-from motor import Motor
-import konstanty
+from microbit import i2c, button_a, sleep
+from cely_projekt import Motor, KalibracniFaktory, Konstanty
 
 def test_konstruktor_string_levy():
-    pass = -1
+    hodnota_testu = -1
     try:
-        motor = Motor("levy")
-        pass = 1
+        motor = Motor("levy", 0.067)
+        hodnota_testu = 1
     except AttributeError as e:
         print(e)
-        pass = 0
-    return pass
+        hodnota_testu = 0
+    return hodnota_testu
 
 def test_konstruktor_string_pravy():
-    pass = -1
+    hodnota_testu = -1
     try:
-        motor = Motor("pravy")
-        pass = 1
+        motor = Motor("pravy", 0.067)
+        hodnota_testu = 1
     except AttributeError as e:
         print(e)
-        pass = 0
-    return pass
+        hodnota_testu = 0
+    return hodnota_testu
 
 def test_konstruktor_konstakty_levy():
-    pass = -1
+    hodnota_testu = -1
     try:
-        motor = Motor(Konstanty.LEVY)
-        pass = 1
+        motor = Motor(Konstanty.LEVY, 0.067)
+        hodnota_testu = 1
     except AttributeError as e:
         print(e)
-        pass = 0
-    return pass
+        hodnota_testu = 0
+    return hodnota_testu
 
 def test_konstruktor_konstanty_pravy():
-    pass = -1
+    hodnota_testu = -1
     try:
-        motor = Motor(Konstanty.PRAVY)
-        pass = 1
+        motor = Motor(Konstanty.PRAVY, 0.067)
+        hodnota_testu = 1
     except AttributeError as e:
         print(e)
-        pass = 0
-    return pass
+        hodnota_testu = 0
+    return hodnota_testu
 
 def test_konstruktor_prazdny():
-    pass = -1
+    hodnota_testu = -1
     try:
         motor = Motor()
-        pass = 0
-    except AttributeError as e:
-        print(e)
-        pass = 1
-    return pass
+        hodnota_testu = 0
+    except:
+        hodnota_testu = 1
+    return hodnota_testu
 
 def test_konstruktor_nahodny_retezec():
-    pass = -1
+    hodnota_testu = -1
     try:
-        motor = Motor("fsdfsd")
-        pass = 0
+        motor = Motor("fsdfsd", 0.067)
+        hodnota_testu = 0
     except AttributeError as e:
         print(e)
-        pass = 1
-    return pass
+        hodnota_testu = 1
+    return hodnota_testu
 
 def test_konstruktor_velke_pismeno():
-    pass = -1
+    hodnota_testu = -1
     try:
-        motor = Motor("Levy")
-        pass = 0
+        motor = Motor("Levy", 0.067)
+        hodnota_testu = 0
     except AttributeError as e:
         print(e)
-        pass = 1
-    return pass
+        hodnota_testu = 1
+    return hodnota_testu
 
-def inicializace():
-    motor = Motor("levy")
+def test_inicializace():
+    motor = Motor("levy", 0.067)
     motor.inicializuj()
-    return motor.__inicializovano
+    return int(motor.__inicializovano)
 
-def kalibrace_po_inicializaci():
-    motor = Motor("levy")
+def test_kalibrace_po_inicializaci():
+    motor = Motor("levy", 0.067)
     motor.inicializuj()
     hodnota = motor.kalibrace()
     if hodnota == 0:
@@ -86,29 +84,52 @@ def kalibrace_po_inicializaci():
     else:
         return 0
 
-def kalibrace_bez_inicializaci():
-    motor = Motor("levy")
+def test_kalibrace_bez_inicializaci():
+    motor = Motor("levy", 0.067)
     hodnota = motor.kalibrace()
     if hodnota == -1:
         return 1
     else:
         return 0
 
+def porovnej_floaty(a,b, rel_tol=1e-04, abs_tol=0.0):
+
+    return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
+
+def test_uhlova_01():
+    motor = Motor("levy", 0.067)
+    skutecna = motor.__dopredna_na_uhlovou(0.1052)
+    print("skutecna", skutecna)
+    ocekavana = Konstanty.PI
+    return int(porovnej_floaty(ocekavana, skutecna))
+
+def zakladni_test_spusteni(nova_verze):
+    min_rychlost = 2.165826 # ziskej z excelu
+    min_pwm_rozjezd = 79 # kalibrace vytiskne na konci pri "zrychluj"
+    min_pwm_dojezd = 41 # kalibrace vytiskne na konci pri "zpomaluj"
+    a = 24.3732783404646 # ziskej z excelu
+    b = 8.21172006498485 # ziskej z excelu
+
+    levy_faktor = KalibracniFaktory(min_rychlost, min_pwm_rozjezd, min_pwm_dojezd, a, b)
+
+    motor = Motor(Konstanty.LEVY, 0.067, levy_faktor, nova_verze)
+    motor.inicializuj()
+    motor.jed_doprednou_rychlosti(0.067*Konstanty.PI)
+    while not button_a.was_pressed():
+        if motor.aktualizuj_se() < 0:
+            break
+        sleep(5)
+
+    motor.jed_doprednou_rychlosti(0)
+
 if __name__ == "__main__":
-    print(test_konstruktor_string_levy(), "test_konstruktor_string_levy")
-    print(test_konstruktor_string_pravy(), "test_konstruktor_string_pravy")
-    print(test_konstruktor_konstakty_levy(), "test_konstruktor_konstakty_levy")
-    print(test_konstruktor_konstanty_pravy(), "test_konstruktor_konstanty_pravy")
-    print(test_konstruktor_prazdny(), "test_konstruktor_prazdny")
-    print(test_konstruktor_nahodny_retezec(), "test_konstruktor_nahodny_retezec")
-    print(test_konstruktor_velke_pismeno(), "test_konstruktor_velke_pismeno")
-    print(inicializace(),"inicializace")
-    print(kalibrace_po_inicializaci(),"kalibrace_po_inicializaci")
-    print(kalibrace_bez_inicializaci(),"kalibrace_bez_inicializaci()")
-    print(,"")
-    print(,"")
-    print(,"")
-    print(,"")
+    i2c.init(4000000)
+
+    #False - Lenka stara verze robota
+    #True - vase verze
+    zakladni_test_spusteni(True)
+
+
 
 
 
