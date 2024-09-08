@@ -1,88 +1,80 @@
-from microbit import *
-import neopixel
+from microbit import sleep
 from utime import ticks_ms, ticks_diff
+from light_placement import LightPlacement
+from light_driver import LightDriver
 
 
-np = neopixel.NeoPixel(pin0, 8)
-headlights = (0, 3)
-backlights = (5, 6)
-led_white = (60, 60, 60)
-led_red = (60, 0, 0)
-led_off = (0, 0, 0)
-led_red_br = (255, 0, 0)
-led_orange = (100, 35, 0)
-indicator_left = (1, 4)
-indicator_right = (2, 7)
-indicator_warning = (1, 2, 4, 7)
-
+lights = LightDriver()
 
 def lightsON():
-    for x in headlights:
-        np[x] = led_white
-    for x in backlights:
-        np[x] = led_red
-    np.show()
+    lights.head_on()
+    lights.back_on()
+    lights.update()
 
 def lightsOFF():
-    for x in headlights:
-        np[x] = led_off
-    for x in backlights:
-        np[x] = led_off
-    np.show()
+    lights.head_off()
+    lights.back_off()
+    lights.update()
 
 def lightsBreakON():
-    temp = np[backlights[1]]
-    for x in backlights:
-        np[x] = led_red_br
-    np.show()
-    return (temp)
+    lights.brake_on()
+    lights.update()
 
 def lightsBreakOFF():
-    for x in backlights:
-        np[x] = led_off
-    np.show()
+    lights.brake_off()
+    lights.update()
 
 def lightsBackON():
-    temp = np[backlights[0]]
-    np[backlights[0]] = led_white
-    np.show()
-    return (temp)
+    lights.reverse_on()
+    lights.update()
 
 def lightsBackOFF():
-    np[backlights[0]] = led_off
-    np.show()
+    lights.reverse_off()
+    lights.update()
 
-def lightsIndicator(direction, last_ind_act):
-    if ticks_diff(ticks_ms(), last_ind_act) >= 400 and np[direction[0]] == led_off:
-        for x in direction:
-            np[x] = led_orange
-        np.show()
-        return ticks_ms()
-    elif ticks_diff(ticks_ms(), last_ind_act) >= 400 and np[direction[0]] == led_orange:
-        for x in direction:
-            np[x] = led_off
-        np.show()
-        return ticks_ms()
-    else:
-        return last_ind_act
+def lightsIndicatorON(direction):
+    lights.blink(direction, 400)
+    lights.update()
 
-while True:
+def lightsIndicatorOFF(direction):
+    lights.blink_off()
+    lights.update()
+
+if __name__ == "__main__":
     # Application example
     print("lightsON")
-    lightsON()  # Light on
-    sleep(1000)
+    lightsON()       # Light on
+    sleep(5000)
     print("lightsBreakON")
     lightsBreakON()  # Brake light on
-    sleep(1000)
+    sleep(5000)
     print("lightsBreakOFF")
     lightsBreakOFF()  # Brake light off
-    sleep(1000)
+    sleep(5000)
     print("lightsBackON")
     lightsBackON()  # Reversing lights on
-    sleep(1000)
+    sleep(5000)
     print("lightsBackOFF")
     lightsBackOFF()  # Reversing lights off
-    sleep(1000)
+    sleep(5000)
+    start_time = ticks_ms()
+    print("lightIndicatorON")
+    lightsIndicatorON(LightPlacement.LEFT_DIRECTION)  # Left indicator on
+    while ticks_diff(ticks_ms(), start_time) < 5000:
+        lights.update()
+        sleep(0.01)
+    print("lightIndicatorOFF")
+    lightsIndicatorOFF(LightPlacement.LEFT_DIRECTION)  # Left indicator off
+    sleep(5000)
+    start_time = ticks_ms()
+    print("lightEmergencyON")
+    lights.blink_emergency(200)  # Emergency indicator, super fast
+    while ticks_diff(ticks_ms(), start_time) < 5000:
+        lights.update()
+        sleep(0.01)
+    print("lightBlinkOFF")
+    lights.blink_off()
+    sleep(5000)
+    lightsIndicatorOFF(LightPlacement.LEFT_DIRECTION)  # Left indicator off
     print("lightsOFF")
     lightsOFF()  # Light off
-    sleep(1000)
