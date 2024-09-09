@@ -1,7 +1,7 @@
 from neopixel import NeoPixel
 from microbit import pin0
 from microbit import sleep
-from datetime import datetime
+from utime import ticks_ms, ticks_diff
 
 ON_TIME = 500
 OFF_TIME = 500
@@ -13,17 +13,19 @@ class Front:
     RIGHT = [2,3]
 
 class Back:
+    BOTH = [4,5,6,7]
     LEFT = [4,5]
     RIGHT = [6,7]
-    BACK = [4,5,6,7]
 
 class Color:
     BLACK = ( 0, 0, 0 )
-    RED = ( 255, 0, 0 )
+    RED_50 = ( 60, 0, 0 )
+    RED_100 = ( 255, 0, 0 )
     GREEN = ( 60, 179, 113 )
     YELLOW = ( 255, 165, 0 )
     BLUE = ( 0, 0, 255 )
-    WHITE = ( 255, 255, 255 )
+    WHITE_50 = ( 60, 60, 60 )
+    WHITE_100 = ( 255, 255, 255 )
 
 class Light:
 
@@ -42,8 +44,8 @@ class Light:
         self.on(poradi_led, Color.BLACK)
 
     def blink(self, poradi_led, barva, duration):
-        start=datetime.now()
-        while not duration or (datetime.now() - start < duration):
+        start=ticks_ms()
+        while not duration or ticks_diff(ticks_ms(), start ) < duration:
             self.on(poradi_led, barva)
             sleep(ON_TIME)
             self.off(poradi_led)
