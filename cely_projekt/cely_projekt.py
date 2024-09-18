@@ -1,5 +1,5 @@
 from microbit import i2c, sleep
-from microbit import pin14, pin15
+from microbit import pin2, pin14, pin15
 
 from utime import ticks_us, ticks_diff
 
@@ -359,3 +359,7 @@ class Robot:
         self.__pravy_motor.jed_doprednou_rychlosti(dopr_rychlost_prave)
 
         return 0
+
+    # zmer napajeci napeti robota
+    def zmer_a_vrat_napajeci_napeti(self):
+        return 0.00898 * pin2.read_analog()
