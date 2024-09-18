@@ -43,13 +43,13 @@ class Senzory:
 
         if not self.nova_verze:
             senzoricka_data[Konstanty.LV_ENKODER] = bitove_pole[9]
-            senzoricka_data[Konstanty.PR_ENKODER] = bitove_pole[8]
+            senzoricka_data[Konstanty.PR_ENKODER] = bitove_pole[8] #TODO pretipuj taky, ale otestuj!
 
-        senzoricka_data[Konstanty.LV_S_CARY] = bitove_pole[7]
-        senzoricka_data[Konstanty.PROS_S_CARY] = bitove_pole[6]
-        senzoricka_data[Konstanty.PR_S_CARY] = bitove_pole[5]
-        senzoricka_data[Konstanty.LV_IR] = bitove_pole[4]
-        senzoricka_data[Konstanty.PR_IR] = bitove_pole[3]
+        senzoricka_data[Konstanty.LV_S_CARY] = bool(int(bitove_pole[7]))
+        senzoricka_data[Konstanty.PROS_S_CARY] = bool(int(bitove_pole[6]))
+        senzoricka_data[Konstanty.PR_S_CARY] = bool(int(bitove_pole[5]))
+        senzoricka_data[Konstanty.LV_IR] = bool(bool(bitove_pole[4]))
+        senzoricka_data[Konstanty.PR_IR] = bool(bool(bitove_pole[3]))
 
         return senzoricka_data
 
