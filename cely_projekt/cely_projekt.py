@@ -1,7 +1,7 @@
-from microbit import i2c, sleep
-from microbit import pin14, pin15
-
+from microbit import button_a, i2c, sleep, pin14, pin15, pin8, pin12
+from machine import time_pulse_us
 from utime import ticks_us, ticks_diff
+from lights_controller import LightsController
 
 class Konstanty:
     NEDEFINOVANO = "nedefinovano"
@@ -26,6 +26,113 @@ class Konstanty:
     PROS_S_CARY = "prostredni_" + SENZOR_CARY
 
     PI = 3.14159265359
+
+class KalibracniFaktory:
+
+    def __init__(self, min_rychlost, min_pwm_rozjezd, min_pwm_dojezd, a, b):
+        self.min_rychlost = min_rychlost
+        self.min_pwm_rozjezd = min_pwm_rozjezd
+        self.min_pwm_dojezd = min_pwm_dojezd
+        self.a = a
+        self.b = b
+
+class AdaptiveSpeedController:
+    def __init__(self, desired_distance, max_speed, Kp, dead_zone):
+        self.desired_distance = desired_distance
+        self.max_speed = max_speed
+        self.Kp = Kp
+        self.dead_zone = dead_zone
+        self.running = False
+
+    def compute_speed(self, vzdalenost):
+        if vzdalenost > 0:
+            error = vzdalenost - self.desired_distance
+            if abs(error) < self.dead_zone:
+                speed = 0
+            else:
+                speed = self.Kp * error
+                speed = max(min(speed, self.max_speed), -self.max_speed)
+            return speed
+        else:
+            return 0
+
+class Robot:
+
+    def __init__(self, rozchod_kol, prumer_kola, kalibrace_levy, kalibrace_pravy, nova_verze=True):
+        """
+        Konstruktor tridy
+        """
+        self.__d = rozchod_kol/2
+        self.__prumer_kola = prumer_kola
+
+        self.__levy_motor = Motor(Konstanty.LEVY, self.__prumer_kola, kalibrace_levy, nova_verze)
+        self.__pravy_motor = Motor(Konstanty.PRAVY, self.__prumer_kola, kalibrace_pravy, nova_verze)
+        self.__inicializovano = False
+        self.controller = None
+        self.ultrasonic_sensor = None
+        self.lights_controller = LightsController()
+        self.lights_controller.turn_on_lights()
+
+    def inicializuj(self):
+        i2c.init(400000)
+        self.__levy_motor.inicializuj()
+        self.__pravy_motor.inicializuj()
+        self.ultrasonic_sensor = Ultrazvuk()
+        self.__inicializovano = True
+
+    def zmer_vzdalenost(self):
+        if self.ultrasonic_sensor:
+            return self.ultrasonic_sensor.zmer_vzdalenost()
+        else:
+            return -1
+
+    # pokrocily ukol 7
+    def jed(self, dopredna_rychlost: float, uhlova_rychlost: float):
+        """Pohybuj se zadanym  pohybem slozenym z dopredne rychlosti v a uhlove rychlosti"""
+
+        if not self.__inicializovano:
+            return -1
+        # kinematika diferencionalniho podvozku - lekce 7
+        dopr_rychlost_leve = dopredna_rychlost - self.__d * uhlova_rychlost
+        dopr_rychlost_prave = dopredna_rychlost + self.__d * uhlova_rychlost
+
+        # vyuziji funkce tridy motor
+        self.__levy_motor.jed_doprednou_rychlosti(dopr_rychlost_leve)
+        self.__pravy_motor.jed_doprednou_rychlosti(dopr_rychlost_prave)
+
+        return 0
+
+    def aktualizuj_se(self):
+        self.__levy_motor.aktualizuj_se()
+        self.__pravy_motor.aktualizuj_se()
+
+    def set_tempomat(self, max_speed):
+        self.__max = max_speed
+
+    def set_adaptive_speed_controller(self, desired_distance, max_speed, Kp, dead_zone):
+        self.controller = AdaptiveSpeedController(desired_distance, max_speed, Kp, dead_zone)
+
+    def start_adaptive_speed_control(self):
+        if self.controller:
+            self.controller.running = True
+            self.jed(0, 0)
+            while self.controller.running and not button_a.was_pressed():
+                vzdalenost = self.zmer_vzdalenost()
+                print("Distance: {:.2f} m".format(vzdalenost))
+                speed = self.controller.compute_speed(vzdalenost)
+                self.jed(speed, 0)
+                sleep(100)
+                self.aktualizuj_se()
+            self.jed(0, 0)
+        else:
+            print("Adaptive speed controller not set.")
+
+    def stop_adaptive_speed_control(self):
+        if self.controller:
+            self.controller.running = False
+            self.jed(0, 0)
+        else:
+            print("Adaptive speed controller not set.")
 
 class Senzory:
 
@@ -74,7 +181,6 @@ class Enkoder:
         self.__tiky = 0
         self.__posledni_hodnota = -1
         self.__tiky_na_otocku = 40
-        self.__nova_verze = nova_verze
         self.__DEBUG = debug
         self.__inicializovano = False
         self.__cas_posledni_rychlosti = ticks_us()
@@ -103,7 +209,6 @@ class Enkoder:
             else:
                 return -2
 
-    # drive se tato metoda jmenovala pocet_tiku
     def aktualizuj_se(self):
         if self.__DEBUG:
             print("v aktualizuj", self.__tiky)
@@ -142,7 +247,7 @@ class Enkoder:
         return self.__radiany_za_sekundu
 
 class Motor:
-    def __init__(self, jmeno, prumer_kola, nova_verze=True, debug=False):
+    def __init__(self, jmeno, prumer_kola, kalibrace, nova_verze=True, debug=False):
         if jmeno == Konstanty.LEVY:
             self.__kanal_dopredu = b"\x05"
             self.__kanal_dozadu = b"\x04"
@@ -150,7 +255,9 @@ class Motor:
             self.__kanal_dopredu = b"\x03"
             self.__kanal_dozadu = b"\x02"
         else:
-            raise AttributeError("spatne jmeno motoru, musi byt \"levy\" a nebo \"pravy\", zadane jmeno je" + str(jmeno))
+            raise AttributeError("spatne jmeno motoru" + str(jmeno))
+
+        self.__kalibrace = kalibrace
 
         self.__DEBUG = debug
         self.__jmeno = jmeno
@@ -170,51 +277,41 @@ class Motor:
         i2c.write(0x70, b"\xE8\xAA")
 
         self.__enkoder.inicializuj()
-
-        if self.__jmeno == Konstanty.LEVY:
-            self.__limity = [4.705, 12.37498]
-            self.__primky_par_a = [17.07965]
-            self.__primky_par_b = [28.63963]
-        else:
-            self.__limity = [4.520269, 8.57154]
-            self.__primky_par_a = [20.98109]
-            self.__primky_par_b = [60.15985]
+        self.__jed_PWM(0)
 
         self.__inicializovano = True
 
         self.__cas_posledni_regulace = ticks_us()
 
     def jed_doprednou_rychlosti(self, v: float):
+        print("jed_dopred_rych:"+str(v))
         """
         Rozjede motor pozadovanou doprednou rychlosti
         """
         if not self.__inicializovano:
+            print("Motor not initialized")
             return -1
 
         self.__pozadovana_uhlova_r_kola = self.__dopredna_na_uhlovou(v)
-        if self.__DEBUG:
-            print("pozadovana uhlova", self.__pozadovana_uhlova_r_kola)
+        print("pozadovana uhlova", self.__pozadovana_uhlova_r_kola)
 
         self.__rychlost_byla_zadana = True
 
-        # pouziji funkci abs pro vypocteni absolutni hodnoty
+        # pouziji funkce abs pro vypocteni absolutni hodnoty
         # PWM je vzdy pozitivni
         # znamenko uhlove rychlosti ovlivni smer
         prvni_PWM = self.__uhlova_na_PWM(abs(self.__pozadovana_uhlova_r_kola))
-        if self.__DEBUG:
-            print("prvni_PWM", prvni_PWM)
+        print("prvni_PWM", prvni_PWM)
 
         if self.__pozadovana_uhlova_r_kola > 0:
             self.__smer = Konstanty.DOPREDU
         elif self.__pozadovana_uhlova_r_kola < 0:
             self.__smer = Konstanty.DOZADU
         else: # = 0
-            self.__smer == Konstanty.NEDEFINOVANO
+            self.__smer = Konstanty.NEDEFINOVANO
 
         return self.__jed_PWM(prvni_PWM)
 
-
-    #lekce 8, slidy 8 - 11
     def __dopredna_na_uhlovou(self, v: float):
         """
         Prepocita doprednou rychlost kola na uhlovou
@@ -225,16 +322,11 @@ class Motor:
         """
         Prepocte uhlovou rychlost na PWM s vyuzitim dat z kalibrace
         """
+        if(uhlova == 0):
+            return 0
+        else:
+            return int(self.__kalibrace.a*uhlova + self.__kalibrace.b)
 
-        a, b = self.__najdi_spravne_parametery(uhlova)
-        return int(a*uhlova + b)
-
-    def __najdi_spravne_parametery(self, uhlova):
-        # TODO
-        return self.__primky_par_a[0], self.__primky_par_b[0]
-
-    # DU 5 pokrocily/DU 7 zacatecnici
-    # jed(motor, smer, rychlost)
     def __jed_PWM(self, PWM):
         je_vse_ok = -2
         if self.__smer == Konstanty.DOPREDU:
@@ -259,9 +351,12 @@ class Motor:
         return 0
 
     def aktualizuj_se(self):
+        if not self.__inicializovano:
+            return -1
         self.__enkoder.aktualizuj_se()
         cas_ted = ticks_us()
         cas_rozdil = ticks_diff(cas_ted, self.__cas_posledni_regulace)
+
         navratova_hodnota = 0
         if cas_rozdil > self.__perioda_regulace:
             navratova_hodnota = self.__reguluj_otacky()
@@ -269,7 +364,6 @@ class Motor:
 
         return navratova_hodnota
 
-    # ukazka v pridanem materialu k hodine 8
     def __reguluj_otacky(self):
 
         if not self.__inicializovano:
@@ -288,24 +382,16 @@ class Motor:
 
         error = self.__pozadovana_uhlova_r_kola - aktualni_rychlost
         akcni_zasah = P*error
+        if self.__DEBUG:
+            print((aktualni_rychlost,error, akcni_zasah))
         return self.__zmen_PWM_o(akcni_zasah)
 
     def __zmen_PWM_o(self, akcni_zasah):
         # error a tim padem i akcni_zasah muze byt jak pozitivni tak negativni, nezavisle na smeru
-        # priklad, pozadovana = 5, aktualni = 2
-        # smer = dopredu a error > 0 => musim zrychlit
-        # priklad, pozadovana 5, aktualni 10
-        # smer = dopredu a error < 0 => musim zpomalit
-        # priklad, pozadovana -5, aktualni -2
-        # smer = dozadu a error < 0 => musim zrychlist
-        # priklad, pozadovana -5, aktualni -7
-        # smer= dozadu a error>0 => musim zpomalit
-
         akcni_zasah = int(akcni_zasah) #PWM je v celych cislech
 
         if self.__smer == Konstanty.DOZADU:
-            # prohod logiku aby pozitivni akcni_zasah u jizdy dozadu
-            # take znamenal zrychli a ne zpomal, viz priklad nahore
+            # Pro jízdu dozadu invertujeme akcni_zasah
             akcni_zasah *= -1
 
         nove_PWM = self.__PWM + akcni_zasah
@@ -313,49 +399,68 @@ class Motor:
         if nove_PWM > 255:
             nove_PWM = 255
 
-        # toto nastane ve chvili, kdy by akcni_zasah zpomaleni byl
-        # vetsi nez aktualni rychlost
-        # myslenka je, ze chceme zpomalit co nejvice muzeme, tedy v nasem pripade zastavit
-        # rozjet motor na opacnou stranu za me z pohledu rizeni rychlosti otaceni nedava smysl
-        # ale muzeme se o tom pobavit :)
-
         if nove_PWM < 0:
             nove_PWM  = 0
-
+        if self.__DEBUG:
+            print(nove_PWM)
         return self.__jed_PWM(nove_PWM)
 
-class Robot:
+class Ultrazvuk:
 
-    def __init__(self, rozchod_kol: float, prumer_kola: float, nova_verze=True):
-        """
-        Konstruktor tridy
-        """
-        self.__d = rozchod_kol/2
-        self.__prumer_kola = prumer_kola
+    def __init__(self):
+        self.__trigger = pin8
+        self.__echo = pin12
 
-        self.__levy_motor = Motor(Konstanty.LEVY, self.__prumer_kola, nova_verze)
-        self.__pravy_motor = Motor(Konstanty.PRAVY, self.__prumer_kola, nova_verze)
-        self.__inicializovano = False
+        self.__trigger.write_digital(0)
+        self.__echo.read_digital()
 
-    def inicializuj(self):
-        i2c.init(400000)
-        self.__levy_motor.inicializuj()
-        self.__pravy_motor.inicializuj()
-        self.__inicializovano = True
+    def zmer_vzdalenost(self):
 
-    # pokrocily ukol 7
-    def jed(self, dopredna_rychlost: float, uhlova_rychlost: float):
-        """Pohybuj se zadanym  pohybem slozenym z dopredne rychlosti v a uhlove rychlosti"""
+        rychlost_zvuku = 340 # m/s
 
-        if not self.__inicializovano:
-            return -1
-        # kinematika diferencionalniho podvozku - lekce 7
-        dopr_rychlost_leve = dopredna_rychlost - self.__d * uhlova_rychlost
-        dopr_rychlost_prave = dopredna_rychlost + self.__d * uhlova_rychlost
+        self.__trigger.write_digital(1)
+        self.__trigger.write_digital(0)
 
-        # nevolam povely i2c rovnou - to bych rozbijela zapouzdreni trid
-        # vyuziji funkce tridy motor
-        self.__levy_motor.jed_doprednou_rychlosti(dopr_rychlost_leve)
-        self.__pravy_motor.jed_doprednou_rychlosti(dopr_rychlost_prave)
+        zmereny_cas_us = time_pulse_us(self.__echo, 1)
+        if zmereny_cas_us < 0:
+            return zmereny_cas_us
 
-        return 0
+        zmereny_cas_s = zmereny_cas_us/ 1000000
+        vzdalenost = zmereny_cas_s*rychlost_zvuku/2
+
+        return vzdalenost
+        
+
+def start_robot():
+    print("startRobot")
+    min_rychlost = 1.240075
+    min_pwm_rozjezd = 61
+    min_pwm_dojezd = 41
+    a = 15.22801354
+    b = 42.27615142
+
+    levy_faktor = KalibracniFaktory(min_rychlost, min_pwm_rozjezd, min_pwm_dojezd, a, b)
+
+    min_rychlost = 0.1553497
+    min_pwm_rozjezd = 37
+    min_pwm_dojezd = 37
+    a = 17.05925837
+    b = 27.05851914
+
+    pravy_faktor = KalibracniFaktory(min_rychlost, min_pwm_rozjezd, min_pwm_dojezd, a, b)
+
+    robot = Robot(0.15, 0.067, levy_faktor, pravy_faktor, True)
+    robot.inicializuj()
+
+    desired_distance = 0.2 
+    max_speed = 0.3 
+    Kp = 1
+    dead_zone = 0.01
+
+    robot.set_adaptive_speed_controller(desired_distance, max_speed, Kp, dead_zone)
+    robot.start_adaptive_speed_control()
+
+if __name__ == "__main__":
+    print("start")
+    start_robot()
+
