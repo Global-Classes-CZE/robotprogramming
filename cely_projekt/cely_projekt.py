@@ -48,8 +48,8 @@ class Senzory:
         senzoricka_data[Konstanty.LV_S_CARY] = bool(int(bitove_pole[7]))
         senzoricka_data[Konstanty.PROS_S_CARY] = bool(int(bitove_pole[6]))
         senzoricka_data[Konstanty.PR_S_CARY] = bool(int(bitove_pole[5]))
-        senzoricka_data[Konstanty.LV_IR] = bool(bool(bitove_pole[4]))
-        senzoricka_data[Konstanty.PR_IR] = bool(bool(bitove_pole[3]))
+        senzoricka_data[Konstanty.LV_IR] = bool(int(bitove_pole[4]))
+        senzoricka_data[Konstanty.PR_IR] = bool(int(bitove_pole[3]))
 
         return senzoricka_data
 
