@@ -404,7 +404,7 @@ class Robot:
             self.__posledni_cas_reg_cary_us = cas_ted
             data = self.__senzory.precti_senzory()
 
-            if data[Konstanty.LV_S_CARY]:
+    TODO        if data[Konstanty.LV_S_CARY]:
                 self.jed(dopredna, uhlova)
 
             if data[Konstanty.PR_S_CARY]:
@@ -474,7 +474,7 @@ class ZadniSvetlo(Svetlo):
         super().__init__(poradi_led, neopixel, (60, 0, 0))
         self.vypni()
 
-    def zapni_brzdove():
+    def zapni_brzdove(self):
         self.nastav_barvu(poradi_led, (255, 0, 0))
         self.np.write()
 
@@ -482,7 +482,7 @@ class ZpatecniSvetlo(ZadniSvetlo):
     def __init__(self, poradi_led, neopixel):
         super().__init__(poradi_led, neopixel)
 
-    def zapni_zpatecni():
+    def zapni_zpatecni(self):
         self.nastav_barvu(poradi_led, (60, 60, 60))
         self.np.write()
 
