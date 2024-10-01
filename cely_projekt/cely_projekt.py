@@ -404,7 +404,7 @@ class Robot:
             self.__posledni_cas_reg_cary_us = cas_ted
             data = self.__senzory.precti_senzory()
 
-    TODO        if data[Konstanty.LV_S_CARY]:
+            if data[Konstanty.LV_S_CARY]:
                 self.jed(dopredna, uhlova)
 
             if data[Konstanty.PR_S_CARY]:
@@ -547,9 +547,9 @@ class SvetelnyModul:
             self.blinkry[3].blikej()
 
     def vypni_blinkry(self):
-        self.blinkr[0].vypni()
-        self.blinkr[2].vypni()
-        self.blinkr[1].vypni()
-        self.blinkr[3].vypni()
+        self.blinkry[0].vypni()
+        self.blinkry[2].vypni()
+        self.blinkry[1].vypni()
+        self.blinkry[3].vypni()
 
 
