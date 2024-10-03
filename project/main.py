@@ -3,11 +3,20 @@
 from Robot import Robot
 from microbit import button_a, sleep
 
+# from StateMain import StateMain
+
 if __name__ == "__main__":
 
     robot = Robot(0.147, 0.067)
-    sleep(1000)
-    robot.go(120, 0)
+    while not button_a.was_pressed():
+        robot.tick()
+
+    # state = StateMain(robot)
+    # state.tick()
+    # state.tick()
+
+    # sleep(1000)
+    # robot.go(120, 0)
     # sleep(1000)
     # robot.go(0, 1350)
     # sleep(1000)
@@ -24,8 +33,7 @@ if __name__ == "__main__":
     #
     # robot.jed(dopredna, 0)
 
-    while not button_a.was_pressed():
-        robot.tick()
+
         # sleep(1)
     # data = senzory.precti_senzory()
     #
@@ -57,5 +65,5 @@ if __name__ == "__main__":
     #
     # robot.aktualizuj_se()
     # sleep(5)
-    robot.go(0, 0)
+    # robot.go(0, 0)
     # robot.jed(0, 0)

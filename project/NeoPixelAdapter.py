@@ -7,6 +7,7 @@ class NeoPixelAdapter:
         self.np = NeoPixel(pin0, 8)
 
     def on(self, numbers, color):
+        print(numbers, color)
         if isinstance(numbers, int):
             numbers = [numbers]
         for i in numbers:

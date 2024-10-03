@@ -1,6 +1,5 @@
 from NeoPixelAdapter import NeoPixelAdapter
-
-from utime import ticks_ms, ticks_diff
+from Period import Period
 
 
 class LightController:
@@ -13,16 +12,14 @@ class LightController:
     __LED_BACK_R = 6
     __LED_BACK_BLINKER_R = 7
 
-    __WHITE = (60, 60, 60)
-    __WHITE_MAX = (255, 255, 255)
-    __RED = (60, 0, 0)
-    __RED_MAX = (255, 0, 0)
-    __YELLOW = (247, 247, 1)
-    __BLACK = (0, 0, 0)
-
     def __init__(self):
-        self.neoPixel = NeoPixelAdapter()
+        self.__neoPixel = NeoPixelAdapter()
+        self.__period = Period(1000)
         self.__init()
 
     def __init(self):
-        self.neoPixel.off(range(0, 8))
+        self.__neoPixel.off(range(0, 8))
+        self.__neoPixel.on(range(0, 4), (200, 200, 200))
+
+    def on(self, numbers, color):
+        self.__neoPixel.on(numbers, color)
