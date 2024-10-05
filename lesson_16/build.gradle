@@ -210,8 +210,6 @@ File getMainFileName(List<File> includedFiles, List<File> excludedFiles) {
         if (mainFiles.isEmpty()) {
             throw new Exception("No *.py files found in the project directory looking like a main code block")
         } else if (mainFiles.size() > 1) {
-            excludedFiles.forEach { logger.lifecycle("Excluded: ${it.getAbsolutePath()}") }
-            logger.lifecycle("Excluded files: ${excludedFiles}")
             throw new Exception("Multiple *.py files found in the project directory looking like a main code block: $mainFiles, please specify -Pmain={file}")
         }
         logger.lifecycle("Detected main code block in file ${mainFiles.getFirst()}")
