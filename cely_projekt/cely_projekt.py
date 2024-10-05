@@ -6,7 +6,7 @@ from neopixel import NeoPixel
 
 from utime import ticks_us, ticks_diff
 
-class Konstanty:
+class K:
     NEDEFINOVANO = "nedefinovano"
 
     LEVY = "levy"
@@ -58,14 +58,14 @@ class Senzory:
         senzoricka_data = {}
 
         if not self.nova_verze:
-            senzoricka_data[Konstanty.LV_ENKODER] = bitove_pole[9]
-            senzoricka_data[Konstanty.PR_ENKODER] = bitove_pole[8] #TODO pretipuj taky, ale otestuj!
+            senzoricka_data[K.LV_ENKODER] = bitove_pole[9]
+            senzoricka_data[K.PR_ENKODER] = bitove_pole[8] #TODO pretipuj taky, ale otestuj!
 
-        senzoricka_data[Konstanty.LV_S_CARY] = bool(int(bitove_pole[7]))
-        senzoricka_data[Konstanty.PROS_S_CARY] = bool(int(bitove_pole[6]))
-        senzoricka_data[Konstanty.PR_S_CARY] = bool(int(bitove_pole[5]))
-        senzoricka_data[Konstanty.LV_IR] = bool(bool(bitove_pole[4]))
-        senzoricka_data[Konstanty.PR_IR] = bool(bool(bitove_pole[3]))
+        senzoricka_data[K.LV_S_CARY] = bool(int(bitove_pole[7]))
+        senzoricka_data[K.PROS_S_CARY] = bool(int(bitove_pole[6]))
+        senzoricka_data[K.PR_S_CARY] = bool(int(bitove_pole[5]))
+        senzoricka_data[K.LV_IR] = bool(bool(bitove_pole[4]))
+        senzoricka_data[K.PR_IR] = bool(bool(bitove_pole[3]))
 
         return senzoricka_data
 
@@ -105,16 +105,16 @@ class Enkoder:
 
     def __aktualni_hodnota(self):
         if self.__nova_verze:
-            if self.__jmeno == Konstanty.PR_ENKODER:
+            if self.__jmeno == K.PR_ENKODER:
                 return pin15.read_digital()
-            elif self.__jmeno == Konstanty.LV_ENKODER:
+            elif self.__jmeno == K.LV_ENKODER:
                 return pin14.read_digital()
             else:
                 return -2
         else:
             senzoricka_data = self.__senzory.precti_senzory()
 
-            if self.__jmeno == Konstanty.LV_ENKODER or self.__jmeno == Konstanty.PR_ENKODER:
+            if self.__jmeno == K.LV_ENKODER or self.__jmeno == K.PR_ENKODER:
                 return int(senzoricka_data[self.__jmeno])
             else:
                 return -2
@@ -149,7 +149,7 @@ class Enkoder:
         if interval_us >= self.__perioda_rychlosti:
             interval_s = self.__us_na_s(interval_us)
             otacky = self.__tiky/self.__tiky_na_otocku
-            radiany = otacky * 2 * Konstanty.PI
+            radiany = otacky * 2 * K.PI
             self.__radiany_za_sekundu = radiany / interval_s
             self.__tiky = 0
             self.__cas_posledni_rychlosti = cas_ted
@@ -158,10 +158,10 @@ class Enkoder:
 
 class Motor:
     def __init__(self, jmeno, prumer_kola, nova_verze=True, debug=False):
-        if jmeno == Konstanty.LEVY:
+        if jmeno == K.LEVY:
             self.__kanal_dopredu = b"\x05"
             self.__kanal_dozadu = b"\x04"
-        elif jmeno == Konstanty.PRAVY:
+        elif jmeno == K.PRAVY:
             self.__kanal_dopredu = b"\x03"
             self.__kanal_dozadu = b"\x02"
         else:
@@ -171,7 +171,7 @@ class Motor:
         self.__jmeno = jmeno
         self.__prumer_kola = prumer_kola
         self.__enkoder = Enkoder(jmeno + "_enkoder", 1, nova_verze, debug)
-        self.__smer = Konstanty.NEDEFINOVANO
+        self.__smer = K.NEDEFINOVANO
         self.__inicializovano = False
         self.__rychlost_byla_zadana = False
         self.__min_pwm = 0
@@ -185,7 +185,7 @@ class Motor:
 
         self.__enkoder.inicializuj()
 
-        if self.__jmeno == Konstanty.LEVY:
+        if self.__jmeno == K.LEVY:
             self.__limity = [4.705, 12.37498]
             self.__primky_par_a = [17.07965]
             self.__primky_par_b = [28.63963]
@@ -213,11 +213,11 @@ class Motor:
             print("prvni_PWM", prvni_PWM)
 
         if self.__pozadovana_uhlova_r_kola > 0:
-            self.__smer = Konstanty.DOPREDU
+            self.__smer = K.DOPREDU
         elif self.__pozadovana_uhlova_r_kola < 0:
-            self.__smer = Konstanty.DOZADU
+            self.__smer = K.DOZADU
         else: # = 0
-            self.__smer == Konstanty.NEDEFINOVANO
+            self.__smer == K.NEDEFINOVANO
 
         return self.__jed_PWM(prvni_PWM)
 
@@ -239,11 +239,11 @@ class Motor:
 
     def __jed_PWM(self, PWM):
         je_vse_ok = -2
-        if self.__smer == Konstanty.DOPREDU:
+        if self.__smer == K.DOPREDU:
             je_vse_ok  = self.__nastav_PWM_kanaly(self.__kanal_dopredu, self.__kanal_dozadu, PWM)
-        elif self.__smer == Konstanty.DOZADU:
+        elif self.__smer == K.DOZADU:
             je_vse_ok  = self.__nastav_PWM_kanaly(self.__kanal_dozadu, self.__kanal_dopredu, PWM)
-        elif self.__smer == Konstanty.NEDEFINOVANO:
+        elif self.__smer == K.NEDEFINOVANO:
             if PWM == 0:
                 je_vse_ok = self.__nastav_PWM_kanaly(self.__kanal_dozadu, self.__kanal_dopredu, PWM)
             else:
@@ -294,7 +294,7 @@ class Motor:
 
         akcni_zasah = int(akcni_zasah)
 
-        if self.__smer == Konstanty.DOZADU:
+        if self.__smer == K.DOZADU:
             akcni_zasah *= -1
 
         nove_PWM = self.__PWM + akcni_zasah
@@ -309,24 +309,21 @@ class Motor:
 
 class Robot:
 
-    def __init__(self, rozchod_kol: float, prumer_kola: float, prikazy, nova_verze=True):
+    def __init__(self, rozchod_kol: float, prumer_kola: float, nova_verze=True):
         """
         Konstruktor tridy
         """
         self.__d = rozchod_kol/2
         self.__prumer_kola = prumer_kola
 
-        self.__levy_motor = Motor(Konstanty.LEVY, self.__prumer_kola, nova_verze)
-        self.__pravy_motor = Motor(Konstanty.PRAVY, self.__prumer_kola, nova_verze)
+        self.__levy_motor = Motor(K.LEVY, self.__prumer_kola, nova_verze)
+        self.__pravy_motor = Motor(K.PRAVY, self.__prumer_kola, nova_verze)
         self.__inicializovano = False
         self.__cas_minule_reg = ticks_us()
         self.__perioda_regulace = 1000000
         self.__senzory = Senzory(nova_verze)
 
         self.__perioda_cary_us = 75000
-
-        self.__prikazy = prikazy
-        self.__index_prikazu = 0
 
         self.__posledni_cas_popojeti = 0
 
@@ -385,17 +382,17 @@ class Robot:
 
         senzoricka_data = self.__senzory.precti_senzory()
 
-        if senzoricka_data[Konstanty.LV_S_CARY] and senzoricka_data[Konstanty.PR_S_CARY]:
-            return Konstanty.KRIZOVATKA
-        if senzoricka_data[Konstanty.LV_S_CARY] and senzoricka_data[Konstanty.PROS_S_CARY]:
-            return Konstanty.KRIZOVATKA
-        if senzoricka_data[Konstanty.PROS_S_CARY] and senzoricka_data[Konstanty.PR_S_CARY]:
-            return Konstanty.KRIZOVATKA
+        if senzoricka_data[K.LV_S_CARY] and senzoricka_data[K.PR_S_CARY]:
+            return K.KRIZOVATKA
+        if senzoricka_data[K.LV_S_CARY] and senzoricka_data[K.PROS_S_CARY]:
+            return K.KRIZOVATKA
+        if senzoricka_data[K.PROS_S_CARY] and senzoricka_data[K.PR_S_CARY]:
+            return K.KRIZOVATKA
 
-        elif not senzoricka_data[Konstanty.LV_S_CARY] and not senzoricka_data[Konstanty.PR_S_CARY] and not senzoricka_data[Konstanty.PROS_S_CARY]:
-            return Konstanty.ZTRACEN
+        elif not senzoricka_data[K.LV_S_CARY] and not senzoricka_data[K.PR_S_CARY] and not senzoricka_data[K.PROS_S_CARY]:
+            return K.ZTRACEN
         else:
-            return Konstanty.CARA
+            return K.CARA
 
     def jed_po_care(self, dopredna, uhlova):
         cas_ted = ticks_us()
@@ -404,21 +401,19 @@ class Robot:
             self.__posledni_cas_reg_cary_us = cas_ted
             data = self.__senzory.precti_senzory()
 
-            if data[Konstanty.LV_S_CARY]:
+            if data[K.LV_S_CARY]:
                 self.jed(dopredna, uhlova)
 
-            if data[Konstanty.PR_S_CARY]:
+            if data[K.PR_S_CARY]:
                 self.jed(dopredna, -uhlova)
 
-            if not data[Konstanty.LV_S_CARY] and not data[Konstanty.PR_S_CARY]:
+            if not data[K.LV_S_CARY] and not data[K.PR_S_CARY]:
                 self.jed(dopredna, 0)
 
 class Obrazovka:
-    def pis(text, displej=True):
-        if displej:
-            display.show(text[0])
-        else:
-            print(text)
+    def pis(text):
+        display.show(text[0])
+        print(text)
 
 class Svetlo:
     def __init__(self, poradi_led, neopixel_pole, barva):
@@ -534,13 +529,13 @@ class SvetelnyModul:
 
     def blinkry_blikej(self, smer):
 
-        if smer == Konstanty.LEVY:
+        if smer == K.LEVY:
             self.blinkry[0].blikej()
             self.blinkry[2].blikej()
-        elif smer == Konstanty.PRAVY:
+        elif smer == K.PRAVY:
             self.blinkry[1].blikej()
             self.blinkry[3].blikej()
-        elif smer == Konstanty.VSE:
+        elif smer == K.VSE:
             self.blinkry[0].blikej()
             self.blinkry[2].blikej()
             self.blinkry[1].blikej()
