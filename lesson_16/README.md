@@ -9,6 +9,7 @@ Následně jsme začali pracovat na integraci do existujícího stavového autom
 Přibyly stavy "st_lokalizuj_xy", "st_vypocti_uhel".
 
 # Co se změnilo oproti hodině
+- V hodině jsme se už dohodli, že příkazy vyjmeme z třídy Robot. Tedy jsem je teď umazala
 
 - V hodině jsem měli výpis stavů pokaždé, kdy se pustil. Když program běžel, tak to každých 5 ms vypisovalo stav a bylo to nepřehledné. Přesunula jsem tedy výpis stavu jen když se změní. 
 
