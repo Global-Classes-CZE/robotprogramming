@@ -16,6 +16,8 @@ Přibyly stavy "st_lokalizuj_xy", "st_vypocti_uhel".
 
 - v "cely_projeky.py" jsem přejmenovala třídu Konstanty jen na "K", abychom ušetřili znaky
 
+- Funkce Obrazovka.pis už nemá druhý argument True/False a vypisuje se zárověň do terminálu, tak na displej robota
+
 # Jak otestovat
 
 Když kód pustíme a robota si dáte na čáru, můžete sledovat, v jakém stavu se nachází. Když pak robot bude detekovat křižovatku, tak přejde do několika stavů lokalizace. To, že robot zareagoval na křižovatku, je zatím simulované jen tak, že musíte podržet tlačítko B na microbitu.
