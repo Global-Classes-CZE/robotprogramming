@@ -67,7 +67,8 @@ task minify {
                 workingDir projectDir
                 commandLine = [
                         'pyminify', file.getPath(),
-                        '--remove-literal-statements', '--no-rename-locals', '--no-hoist-literals',
+                        '--remove-literal-statements',
+                        '--remove-class-attribute-annotations', '--no-rename-locals', '--no-hoist-literals',
                         '--no-remove-explicit-return-none', '--no-remove-return-annotations',
                         '--output', "${miniDir}/${fileOut}"
                 ]
@@ -176,13 +177,17 @@ task upload {
 }
 
 List<File> propertyCsvToFileList(String property) {
+    List<File> files = new ArrayList<>()
     if (project.hasProperty(property)) {
-        List<String> list = Arrays.asList(project.getProperty(property).split(","))
-        return list.stream()
-                .map { fileName -> new File(projectDir, fileName) }
-                .toList()
+        List<String> patterns = Arrays.asList(project.getProperty(property).split(","))
+        files.addAll(
+                Arrays.<File>stream(projectDir.listFiles())
+                        .filter { f -> f.name.endsWith('.py') }
+                        .filter { f -> patterns.stream().anyMatch { p -> f.name.matches(p) } }
+                        .toList()
+        )
     }
-    return List.of()
+    return files
 }
 
 /**
@@ -190,10 +195,18 @@ List<File> propertyCsvToFileList(String property) {
  */
 File getMainFileName(List<File> includedFiles, List<File> excludedFiles) {
     if (project.hasProperty('main')) {
-        mainFile = new File(projectDir, project.getProperty('main'))
+        def mainFile = new File(projectDir, project.getProperty('main'))
         if (!mainFile.exists()) {
             throw new Exception("Indicated main file ${mainFile.getPath()} does not exist")
         }
+        // any other main files in the directory are excluded automatically
+        excludedFiles.addAll(
+                Arrays.<File> stream(projectDir.listFiles())
+                        .filter { f -> f.name.endsWith('.py') }
+                        .filter { f -> f.name.startsWith('main_') }
+                        .filter { f -> !f.equals(mainFile) }
+                        .toList()
+        )
         return mainFile
     } else if (new File(projectDir, 'main.py').exists()) {
         return new File(projectDir, 'main.py')
