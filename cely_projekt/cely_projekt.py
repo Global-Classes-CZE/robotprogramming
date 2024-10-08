@@ -239,6 +239,16 @@ class Motor:
 
     def __jed_PWM(self, PWM):
         je_vse_ok = -2
+        omezeni = False
+
+        if PWM > 255:
+            PWM = 255
+            omezeni = True
+
+        if PWM < 0:
+            PWM = 0
+            omezeni = True
+
         if self.__smer == K.DOPREDU:
             je_vse_ok  = self.__nastav_PWM_kanaly(self.__kanal_dopredu, self.__kanal_dozadu, PWM)
         elif self.__smer == K.DOZADU:
@@ -251,7 +261,10 @@ class Motor:
         else:
             je_vse_ok = -3
 
-        return je_vse_ok
+        if je_vse_ok == 0 and omezeni:
+            return -4
+        else:
+            return je_vse_ok
 
     def __nastav_PWM_kanaly(self, kanal_on, kanal_off, PWM):
         # TODO zkontroluj, ze motor byl inicializovan
@@ -298,12 +311,6 @@ class Motor:
             akcni_zasah *= -1
 
         nove_PWM = self.__PWM + akcni_zasah
-
-        if nove_PWM > 255:
-            nove_PWM = 255
-
-        if nove_PWM < 0:
-            nove_PWM  = 0
 
         return self.__jed_PWM(nove_PWM)
 
