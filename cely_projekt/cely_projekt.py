@@ -48,6 +48,7 @@ class Senzory:
     def __init__(self, nova_verze=True, debug=False):
         self.nova_verze = nova_verze
         self.DEBUG = debug
+        i2c.init(400000)
 
     def precti_senzory(self):
         surova_data_byte = i2c.read(0x38, 1)
