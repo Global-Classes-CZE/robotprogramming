@@ -158,7 +158,7 @@ class Enkoder:
         return self.__radiany_za_sekundu
 
 class Motor:
-    def __init__(self, jmeno, prumer_kola, nova_verze=True, debug=False):
+    def __init__(self, jmeno, prumer_kola, kalibrace, nova_verze=True, debug=False):
         if jmeno == K.LEVY:
             self.__kanal_dopredu = b"\x05"
             self.__kanal_dozadu = b"\x04"
@@ -167,6 +167,8 @@ class Motor:
             self.__kanal_dozadu = b"\x02"
         else:
             raise AttributeError("spatne jmeno motoru, musi byt \"levy\" a nebo \"pravy\", zadane jmeno je" + str(jmeno))
+
+        self.__kalibrace = kalibrace
 
         self.__DEBUG = debug
         self.__jmeno = jmeno
@@ -185,18 +187,7 @@ class Motor:
         i2c.write(0x70, b"\xE8\xAA")
 
         self.__enkoder.inicializuj()
-
-        if self.__jmeno == K.LEVY:
-            self.__limity = [4.705, 12.37498]
-            self.__primky_par_a = [17.07965]
-            self.__primky_par_b = [28.63963]
-        else:
-            self.__limity = [4.520269, 8.57154]
-            self.__primky_par_a = [20.98109]
-            self.__primky_par_b = [60.15985]
-
         self.__inicializovano = True
-
         self.__cas_posledni_regulace = ticks_us()
 
     def jed_doprednou_rychlosti(self, v: float):
@@ -228,15 +219,10 @@ class Motor:
 
     def __uhlova_na_PWM(self, uhlova):
 
-        a, b = self.__najdi_spravne_parametery(uhlova)
         if uhlova == 0: #TODO uvazuj, zda tohle by nemelo byt pod min rozjezd rychlost
             return 0
         else:
-            return int(a*uhlova + b)
-
-    def __najdi_spravne_parametery(self, uhlova):
-        # TODO
-        return self.__primky_par_a[0], self.__primky_par_b[0]
+            return int(self.__kalibrace.a*uhlova + self.__kalibrace.b)
 
     def __jed_PWM(self, PWM):
         je_vse_ok = -2
@@ -317,15 +303,15 @@ class Motor:
 
 class Robot:
 
-    def __init__(self, rozchod_kol: float, prumer_kola: float, nova_verze=True):
+    def __init__(self, rozchod_kol: float, prumer_kola: float, kalibrace_levy, kalibrace_pravy, nova_verze=True):
         """
         Konstruktor tridy
         """
         self.__d = rozchod_kol/2
         self.__prumer_kola = prumer_kola
 
-        self.__levy_motor = Motor(K.LEVY, self.__prumer_kola, nova_verze)
-        self.__pravy_motor = Motor(K.PRAVY, self.__prumer_kola, nova_verze)
+        self.__levy_motor = Motor(K.LEVY, self.__prumer_kola, kalibrace_levy, nova_verze)
+        self.__pravy_motor = Motor(K.PRAVY, self.__prumer_kola, kalibrace_pravy, nova_verze)
         self.__inicializovano = False
         self.__cas_minule_reg = ticks_us()
         self.__perioda_regulace = 1000000
