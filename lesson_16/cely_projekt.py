@@ -1,6 +1,7 @@
 from microbit import i2c, sleep
-from microbit import pin2, pin14, pin15, pin0
+from microbit import pin14, pin15, pin0
 from microbit import display
+
 from neopixel import NeoPixel
 
 from utime import ticks_us, ticks_diff
@@ -47,7 +48,6 @@ class Senzory:
     def __init__(self, nova_verze=True, debug=False):
         self.nova_verze = nova_verze
         self.DEBUG = debug
-        i2c.init(400000)
 
     def precti_senzory(self):
         surova_data_byte = i2c.read(0x38, 1)
@@ -64,8 +64,8 @@ class Senzory:
         senzoricka_data[K.LV_S_CARY] = bool(int(bitove_pole[7]))
         senzoricka_data[K.PROS_S_CARY] = bool(int(bitove_pole[6]))
         senzoricka_data[K.PR_S_CARY] = bool(int(bitove_pole[5]))
-        senzoricka_data[K.LV_IR] = bool(int(bitove_pole[4]))
-        senzoricka_data[K.PR_IR] = bool(int(bitove_pole[3]))
+        senzoricka_data[K.LV_IR] = bool(bool(bitove_pole[4]))
+        senzoricka_data[K.PR_IR] = bool(bool(bitove_pole[3]))
 
         return senzoricka_data
 
@@ -157,7 +157,7 @@ class Enkoder:
         return self.__radiany_za_sekundu
 
 class Motor:
-    def __init__(self, jmeno, prumer_kola, kalibrace, nova_verze=True, debug=False):
+    def __init__(self, jmeno, prumer_kola, nova_verze=True, debug=False):
         if jmeno == K.LEVY:
             self.__kanal_dopredu = b"\x05"
             self.__kanal_dozadu = b"\x04"
@@ -166,8 +166,6 @@ class Motor:
             self.__kanal_dozadu = b"\x02"
         else:
             raise AttributeError("spatne jmeno motoru, musi byt \"levy\" a nebo \"pravy\", zadane jmeno je" + str(jmeno))
-
-        self.__kalibrace = kalibrace
 
         self.__DEBUG = debug
         self.__jmeno = jmeno
@@ -186,7 +184,18 @@ class Motor:
         i2c.write(0x70, b"\xE8\xAA")
 
         self.__enkoder.inicializuj()
+
+        if self.__jmeno == K.LEVY:
+            self.__limity = [4.705, 12.37498]
+            self.__primky_par_a = [17.07965]
+            self.__primky_par_b = [28.63963]
+        else:
+            self.__limity = [4.520269, 8.57154]
+            self.__primky_par_a = [20.98109]
+            self.__primky_par_b = [60.15985]
+
         self.__inicializovano = True
+
         self.__cas_posledni_regulace = ticks_us()
 
     def jed_doprednou_rychlosti(self, v: float):
@@ -218,23 +227,18 @@ class Motor:
 
     def __uhlova_na_PWM(self, uhlova):
 
+        a, b = self.__najdi_spravne_parametery(uhlova)
         if uhlova == 0: #TODO uvazuj, zda tohle by nemelo byt pod min rozjezd rychlost
             return 0
         else:
-            return int(self.__kalibrace.a*uhlova + self.__kalibrace.b)
+            return int(a*uhlova + b)
+
+    def __najdi_spravne_parametery(self, uhlova):
+        # TODO
+        return self.__primky_par_a[0], self.__primky_par_b[0]
 
     def __jed_PWM(self, PWM):
         je_vse_ok = -2
-        omezeni = False
-
-        if PWM > 255:
-            PWM = 255
-            omezeni = True
-
-        if PWM < 0:
-            PWM = 0
-            omezeni = True
-
         if self.__smer == K.DOPREDU:
             je_vse_ok  = self.__nastav_PWM_kanaly(self.__kanal_dopredu, self.__kanal_dozadu, PWM)
         elif self.__smer == K.DOZADU:
@@ -247,10 +251,7 @@ class Motor:
         else:
             je_vse_ok = -3
 
-        if je_vse_ok == 0 and omezeni:
-            return -4
-        else:
-            return je_vse_ok
+        return je_vse_ok
 
     def __nastav_PWM_kanaly(self, kanal_on, kanal_off, PWM):
         # TODO zkontroluj, ze motor byl inicializovan
@@ -298,19 +299,25 @@ class Motor:
 
         nove_PWM = self.__PWM + akcni_zasah
 
+        if nove_PWM > 255:
+            nove_PWM = 255
+
+        if nove_PWM < 0:
+            nove_PWM  = 0
+
         return self.__jed_PWM(nove_PWM)
 
 class Robot:
 
-    def __init__(self, rozchod_kol: float, prumer_kola: float, kalibrace_levy, kalibrace_pravy, nova_verze=True):
+    def __init__(self, rozchod_kol: float, prumer_kola: float, nova_verze=True):
         """
         Konstruktor tridy
         """
         self.__d = rozchod_kol/2
         self.__prumer_kola = prumer_kola
 
-        self.__levy_motor = Motor(K.LEVY, self.__prumer_kola, kalibrace_levy, nova_verze)
-        self.__pravy_motor = Motor(K.PRAVY, self.__prumer_kola, kalibrace_pravy, nova_verze)
+        self.__levy_motor = Motor(K.LEVY, self.__prumer_kola, nova_verze)
+        self.__pravy_motor = Motor(K.PRAVY, self.__prumer_kola, nova_verze)
         self.__inicializovano = False
         self.__cas_minule_reg = ticks_us()
         self.__perioda_regulace = 1000000
@@ -353,11 +360,6 @@ class Robot:
         self.__pravy_motor.jed_doprednou_rychlosti(dopr_rychlost_prave)
 
         return 0
-
-
-    # zmer napajeci napeti robota
-    def zmer_a_vrat_napajeci_napeti(self):
-        return 0.00898 * pin2.read_analog()
 
     def __aktualni_rychlost(self):
         levy_r = self.__levy_motor.aktualni_rychlost * self.__prumer_kola/2
@@ -544,3 +546,5 @@ class SvetelnyModul:
         self.blinkry[2].vypni()
         self.blinkry[1].vypni()
         self.blinkry[3].vypni()
+
+
