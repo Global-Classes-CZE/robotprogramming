@@ -2,29 +2,27 @@ from utime import ticks_ms, ticks_diff
 
 
 class Period:
-    def __init__(self, period: int = 0):
-        self.__period = period
-        self.__periodOriginal = None
+    def __init__(self, tick_time: [int, None] = None):
+        self.__tickTime = tick_time
         self.__lastTime = 0
         self.__lastDiff = 0
 
     def isTime(self) -> bool:
-        if self.__period == 0:
+        if self.__tickTime is None:
             return False
         tickMs = ticks_ms()
         ticksDiff = ticks_diff(tickMs, self.__lastTime)
-
-        if ticksDiff >= self.__period:
+        if ticksDiff >= self.__tickTime:
             self.__lastTime = tickMs
             self.__lastDiff = ticksDiff
             return True
         return False
 
+    def reset(self):
+        self.__lastTime = ticks_ms()
+
     def getLastDiff(self) -> int:
         return self.__lastDiff
 
-    def setPeriod(self, n: int):
-        self.__period = self.__periodOriginal = n
-
-    def setPeriodTemporary(self, n: [int, None]):
-        self.__period = n if n is not None else self.__periodOriginal
+    def setTickTime(self, n: [int, None]):
+        self.__tickTime = n

@@ -9,6 +9,7 @@ class MoveController:
         self.__motorL = Motor(MoveController.__ADDRESS, b'\x03', b'\x02')
         self.__motorR = Motor(MoveController.__ADDRESS, b'\x05', b'\x04')
         self.__d = wheelSpan / 2
+        self.__init()
 
     def __init(self):
         self.__i2cWrite(b'\x00\x01')
@@ -22,7 +23,6 @@ class MoveController:
     def go(self, speed, rotation):
         v_l = speed - self.__d * rotation
         v_r = speed + self.__d * rotation
-        print(speed, rotation, v_l, v_r)
         if not -255 <= v_l <= 255:
             return -1
         if not -255 <= v_r <= 255:

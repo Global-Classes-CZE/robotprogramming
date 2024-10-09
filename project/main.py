@@ -1,15 +1,40 @@
 # from time import sleep
-
+from Task import Task
 from Robot import Robot
 from microbit import button_a, sleep
+
+from Period import Period
+from SensorReader import UltrasoundReader
+
+from StateMain import StateMain
+from SensorReader import SensorReader
+from SMQ import SMQ
 
 # from StateMain import StateMain
 
 if __name__ == "__main__":
-
     robot = Robot(0.147, 0.067)
+    stateMain = StateMain(robot, [
+        Task('run')
+    ])
+    SMQ.add(stateMain)
+    # robot.goPWM(150)
+    # period = Period(200)
+    # ul = UltrasoundReader()
+
     while not button_a.was_pressed():
-        robot.tick()
+        SMQ.tick()
+        # if period.isTime():
+        #     data = SensorReader.getSensors()
+        #     print('SSS', data[SensorReader.LTL] + data[SensorReader.LTM] + data[SensorReader.LTR],
+        #           data[SensorReader.OL] + data[SensorReader.OR])
+
+    #
+    #     robot.tick()
+    #     stateMain.tick()
+    #     if period.isTime():
+    #         print(ul.getDistance())
+    #         # print(robot.encoder().wheel().getDistance())
 
     # state = StateMain(robot)
     # state.tick()
@@ -33,8 +58,7 @@ if __name__ == "__main__":
     #
     # robot.jed(dopredna, 0)
 
-
-        # sleep(1)
+    # sleep(1)
     # data = senzory.precti_senzory()
     #
     # # jak casto vycitat hodnoty??
@@ -67,3 +91,5 @@ if __name__ == "__main__":
     # sleep(5)
     # robot.go(0, 0)
     # robot.jed(0, 0)
+
+    robot.goPWM(0)

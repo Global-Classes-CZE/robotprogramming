@@ -11,7 +11,7 @@ class Robot:
         self.__lightController = LightController()
         self.__moveController = MoveController(wheelSpan, wheelDiameter)
         self.__encoder = Encoder(wheelDiameter)
-        self.__stateLight = StateLight(self.__lightController).setState('robotInit')
+        # self.__stateLight = StateLight(self.__lightController).setTask('robotInit')
         # self.__init()
 
     # def __init(self):
@@ -20,12 +20,15 @@ class Robot:
     #
     # def tick(self):
 
-    def go(self, speed, rotation=0):
-        self.__moveController.go(speed, rotation)
+    def goPWM(self, pwm, rotation=0):
+        self.__moveController.go(pwm, rotation)
 
     def light(self) -> LightController:
         return self.__lightController
 
+    def encoder(self) -> Encoder:
+        return self.__encoder
+
     def tick(self):
         self.__encoder.tick()
-        self.__stateLight.tick()
+        # self.__stateLight.tick()
