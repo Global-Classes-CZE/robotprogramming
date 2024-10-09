@@ -1,5 +1,6 @@
 from StateAbstract import StateAbstract
 from Robot import Robot
+from StateLight import StateLight
 from Task import Task, Step
 from StateMove import StateMove
 
@@ -10,9 +11,15 @@ class StateMain(StateAbstract):
         self.__robot = robot
         super().__init__(tasks, tick_time)
 
+    def __init(self):
+        self.add2SMQ(StateLight(self.__robot.light(), [
+            Step('allOff'),
+            Step('allCarReady'),
+        ]))
+
     def __run(self):
         sm = StateMove(self.__robot, [
-            Step('cruiseControl'),
+            Task('cruiseControl', 250),
             Step('left'),
             Step('right'),
         ], 1000)
@@ -24,4 +31,3 @@ class StateMain(StateAbstract):
 
     def smq_child_done(self, smq_no: int):
         print('smq_child_done', smq_no)
-        self.__robot.goPWM(0, 0)

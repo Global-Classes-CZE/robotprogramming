@@ -9,7 +9,7 @@ class Period:
 
     def isTime(self) -> bool:
         if self.__tickTime is None:
-            return False
+            return True
         tickMs = ticks_ms()
         ticksDiff = ticks_diff(tickMs, self.__lastTime)
         if ticksDiff >= self.__tickTime:

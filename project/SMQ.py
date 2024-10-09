@@ -7,6 +7,7 @@ class SMQ:
         SMQ.__NO += 1
         sm.smq_no(SMQ.__NO)
         SMQ.__Q[SMQ.__NO] = [sm, smq_no_parent]
+        sm.run()
         return sm
 
     @staticmethod

@@ -5,19 +5,10 @@ from Task import Task
 
 
 class StateLight(StateAbstract):
-    def __init__(self, lightController: LightController):
-        super().__init__()
+    def __init__(self, lightController: LightController, tasks, tick_time = None):
         self.__lightController = lightController
+        super().__init__(tasks, tick_time)
 
-    def __robotInit(self):
-        self.addInstance(StateLight(self.__lightController)).setTasks([
-            Task('allOff'),
-            Task('allCarReady'),
-        ], 500)
-
-    def __robotInit__tick(self):
-        if self.isQueueEmpty():
-            self.setTask('end')
 
     def __allOff(self):
         self.__lightController.on(range(0, 8), Color.BLACK)

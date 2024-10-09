@@ -14,7 +14,9 @@ class StateAbstract:
         self.__stack = []
         self.__curTask = None  # type: Task | None
         self.__smq_no = None  # type: int | None
-        self.__reqNextTask = False
+        self.__ntid = None  # Next Time ID
+        self.__running = False
+        self.__tic = 0  # task id counter
         if isinstance(tasks, list):
             self.setTasks(tasks, time_tick)
 
@@ -34,6 +36,11 @@ class StateAbstract:
         # prida noveho potomka do SQM
         return SMQ.add(sm, self.__smq_no)
 
+    def run(self):
+        self.__period.reset()
+        self.__running = True
+        self.nextTask()
+
     def smq_child_done(self, smq_no: int):
         # bude provolana, kdykoliv se dokonci ukoly v SQM potomkovi
         pass
@@ -44,15 +51,19 @@ class StateAbstract:
         self.__smq_no = smq_no
 
     def tick(self):
+        if self.__running is False:
+            return
         if self.__curTask and self.__period.isTime():
-            self.__reqNextTask = self.__curTask.autoNext()
+            self.__ntid = self.__curTask.id()
             self.__callStep(self.__curTask.name() + '__tick')
-            if self.__reqNextTask:
+            if self.__curTask.autoNext() and self.__ntid == self.__curTask.id():
                 self.nextTask()
 
     def setTask(self, task: Task):
         if self.__curTask is not None:
             self.__callStep(self.__curTask.name() + '__end')
+        self.__tic += 1
+        task.id(self.__tic)
         self.__curTask = task
         t = task.tickTime()
         self.setTickTime(self.__tickTimeDefault if t is None else t)
@@ -62,10 +73,10 @@ class StateAbstract:
         self.__period.reset()
         self.__tickTimeDefault = tick_time
         self.__stack = tasks if isinstance(tasks, list) else []
-        self.nextTask()
+        if self.__running:
+            self.nextTask()
 
     def nextTask(self):
-        self.__reqNextTask = False
         if self.__stack:
             self.setTask(self.__stack.pop(0))
             return
@@ -74,6 +85,7 @@ class StateAbstract:
     def __callStep(self, name: str):
         n = '__' + name
         if hasattr(self, n):
+            print('call: ', n)
             fce = getattr(self, n)
             fce()
 

@@ -1,5 +1,5 @@
 # from time import sleep
-from Task import Task
+from Task import Task, Step
 from Robot import Robot
 from microbit import button_a, sleep
 
@@ -15,7 +15,8 @@ from SMQ import SMQ
 if __name__ == "__main__":
     robot = Robot(0.147, 0.067)
     stateMain = StateMain(robot, [
-        Task('run')
+        Step('init'),
+        Task('run'),
     ])
     SMQ.add(stateMain)
     # robot.goPWM(150)
