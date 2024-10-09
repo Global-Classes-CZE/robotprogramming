@@ -4,7 +4,7 @@ from cely_projekt import Konstanty, KalibracniFaktory, Robot
 
 def zakladni_test_spusteni():
 
-    min_rychlost = 2.1658lu
+    min_rychlost = 2.1658
     min_pwm_rozjezd = 79 # kalibrace vytiskne na konci pri "zrychluj"
     min_pwm_dojezd = 41 # kalibrace vytiskne na konci pri "zpomaluj"
     a = 24.3732783404646 # ziskej z excelu
