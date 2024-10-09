@@ -1,11 +1,11 @@
-from microbit import sleep, i2c
+from microbit import sleep, i2c, pin2
 from utime import ticks_diff, ticks_us
 
 from cely_projekt import Konstanty, Motor
 
 class Kalibrace:
 
-    def __init__(self, prumer_kola: float, smer: string, akcelerace: string, nova_verze: bool = True):
+    def __init__(self, prumer_kola: float, smer: string, akcelerace: string, zkracena_kalibrace: bool = False, nova_verze: bool = True):
         """
         Konstrukt tridy: vytvoreni objektu motoru a jejich inicializace
         """
@@ -13,6 +13,7 @@ class Kalibrace:
         self.__pravy_motor = Motor(Konstanty.PRAVY, prumer_kola, nova_verze)
         self.__smer = smer
         self.__akcelerace = akcelerace
+        self.__zkracena = zkracena_kalibrace
 
         i2c.init(400000)
         self.__levy_motor.inicializuj()
@@ -42,9 +43,15 @@ class Kalibrace:
         navratova_hodnota = 0
 
         if self.__akcelerace == "zrychluj":
-            rozsah = range(50,256)
+            if self.__zkracena:
+                rozsah = range(90,150)
+            else:
+                rozsah = range(50,256)
         elif self.__akcelerace == "zpomaluj":
-            rozsah = range(255,30, -1)
+            if self.__zkracena:
+                rozsah = range(110,30, -1)
+            else:
+                rozsah = range(255,30, -1)
         else:
             print("spatne akcelerace, hodnoty jsou: zrychluj nebo zpomaluj")
             return
@@ -83,6 +90,7 @@ class Kalibrace:
             print()
             print("min_pwm_dojezd_pravy", self.__min_pwm_dojezd[Konstanty.PRAVY])
 
+        print("napajeci_napeti", self.zmer_a_vrat_napajeci_napeti())
 
         # TODO udelej kalibraci automaticky
 
@@ -156,5 +164,8 @@ class Kalibrace:
             if self.__min_pwm_dojezd[jmeno] != -1:
                 self.__min_pwm_dojezd[jmeno] = -1
 
+    # zmer napajeci napeti robota
+    def zmer_a_vrat_napajeci_napeti(self):
+        return 0.00898 * pin2.read_analog()
 
 
