@@ -158,71 +158,71 @@ class Enkoder:
 class Motor:
     def __init__(self, jmeno, prumer_kola, kalibrace, nova_verze=True, debug=False):
         if jmeno == K.LEVY:
-            self.__kanal_dopredu = b"\x05"
-            self.__kanal_dozadu = b"\x04"
+            self.kanal_dopredu = b"\x05"
+            self.kanal_dozadu = b"\x04"
         elif jmeno == K.PRAVY:
-            self.__kanal_dopredu = b"\x03"
-            self.__kanal_dozadu = b"\x02"
+            self.kanal_dopredu = b"\x03"
+            self.kanal_dozadu = b"\x02"
         else:
             raise AttributeError("spatne jmeno motoru, musi byt \"levy\" a nebo \"pravy\", zadane jmeno je" + str(jmeno))
 
-        self.__kalibrace = kalibrace
+        self.kalibrace = kalibrace
 
-        self.__DEBUG = debug
-        self.__jmeno = jmeno
-        self.__prumer_kola = prumer_kola
-        self.__enkoder = Enkoder(jmeno + "_enkoder", 1, nova_verze, debug)
-        self.__smer = K.NEDEFINOVANO
-        self.__inicializovano = False
-        self.__rychlost_byla_zadana = False
-        self.__min_pwm = 0
-        self.__perioda_regulace = 1000000 #v microsekundach
-        self.__cas_posledni_regulace = 0
+        self.DEBUG = debug
+        self.jmeno = jmeno
+        self.prumer_kola = prumer_kola
+        self.enkoder = Enkoder(jmeno + "_enkoder", 1, nova_verze, debug)
+        self.smer = K.NEDEFINOVANO
+        self.inicializovano = False
+        self.rychlost_byla_zadana = False
+        self.min_pwm = 0
+        self.perioda_regulace = 1000000 #v microsekundach
+        self.cas_posledni_regulace = 0
         self.aktualni_rychlost = 0
 
     def inicializuj(self):
         i2c.write(0x70, b"\x00\x01")
         i2c.write(0x70, b"\xE8\xAA")
 
-        self.__enkoder.inicializuj()
-        self.__inicializovano = True
-        self.__cas_posledni_regulace = ticks_us()
+        self.enkoder.inicializuj()
+        self.inicializovano = True
+        self.cas_posledni_regulace = ticks_us()
 
     def jed_doprednou_rychlosti(self, v: float):
-        if not self.__inicializovano:
+        if not self.inicializovano:
             return -1
 
-        self.__pozadovana_uhlova_r_kola = self.__dopredna_na_uhlovou(v)
-        if self.__DEBUG:
-            print("pozadovana uhlova", self.__pozadovana_uhlova_r_kola)
+        self.pozadovana_uhlova_r_kola = self.dopredna_na_uhlovou(v)
+        if self.DEBUG:
+            print("pozadovana uhlova", self.pozadovana_uhlova_r_kola)
 
-        self.__rychlost_byla_zadana = True
+        self.rychlost_byla_zadana = True
 
-        prvni_PWM = self.__uhlova_na_PWM(abs(self.__pozadovana_uhlova_r_kola))
-        if self.__DEBUG:
+        prvni_PWM = self.uhlova_na_PWM(abs(self.pozadovana_uhlova_r_kola))
+        if self.DEBUG:
             print("prvni_PWM", prvni_PWM)
 
-        if self.__pozadovana_uhlova_r_kola > 0:
-            self.__smer = K.DOPREDU
-        elif self.__pozadovana_uhlova_r_kola < 0:
-            self.__smer = K.DOZADU
+        if self.pozadovana_uhlova_r_kola > 0:
+            self.smer = K.DOPREDU
+        elif self.pozadovana_uhlova_r_kola < 0:
+            self.smer = K.DOZADU
         else: # = 0
-            self.__smer == K.NEDEFINOVANO
+            self.smer == K.NEDEFINOVANO
 
-        return self.__jed_PWM(prvni_PWM)
+        return self.jed_PWM(prvni_PWM)
 
 
-    def __dopredna_na_uhlovou(self, v: float):
-        return v/(self.__prumer_kola/2)
+    def dopredna_na_uhlovou(self, v: float):
+        return v/(self.prumer_kola/2)
 
-    def __uhlova_na_PWM(self, uhlova):
+    def uhlova_na_PWM(self, uhlova):
 
         if uhlova == 0: #TODO uvazuj, zda tohle by nemelo byt pod min rozjezd rychlost
             return 0
         else:
-            return int(self.__kalibrace.a*uhlova + self.__kalibrace.b)
+            return int(self.kalibrace.a*uhlova + self.kalibrace.b)
 
-    def __jed_PWM(self, PWM):
+    def jed_PWM(self, PWM):
         je_vse_ok = -2
         omezeni = False
 
@@ -234,13 +234,13 @@ class Motor:
             PWM = 0
             omezeni = True
 
-        if self.__smer == K.DOPREDU:
-            je_vse_ok  = self.__nastav_PWM_kanaly(self.__kanal_dopredu, self.__kanal_dozadu, PWM)
-        elif self.__smer == K.DOZADU:
-            je_vse_ok  = self.__nastav_PWM_kanaly(self.__kanal_dozadu, self.__kanal_dopredu, PWM)
-        elif self.__smer == K.NEDEFINOVANO:
+        if self.smer == K.DOPREDU:
+            je_vse_ok  = self.nastav_PWM_kanaly(self.kanal_dopredu, self.kanal_dozadu, PWM)
+        elif self.smer == K.DOZADU:
+            je_vse_ok  = self.nastav_PWM_kanaly(self.kanal_dozadu, self.kanal_dopredu, PWM)
+        elif self.smer == K.NEDEFINOVANO:
             if PWM == 0:
-                je_vse_ok = self.__nastav_PWM_kanaly(self.__kanal_dozadu, self.__kanal_dopredu, PWM)
+                je_vse_ok = self.nastav_PWM_kanaly(self.kanal_dozadu, self.kanal_dopredu, PWM)
             else:
                 je_vse_ok = -1
         else:
@@ -251,53 +251,53 @@ class Motor:
         else:
             return je_vse_ok
 
-    def __nastav_PWM_kanaly(self, kanal_on, kanal_off, PWM):
+    def nastav_PWM_kanaly(self, kanal_on, kanal_off, PWM):
         # TODO zkontroluj, ze motor byl inicializovan
         i2c.write(0x70, kanal_off + bytes([0]))
         i2c.write(0x70, kanal_on + bytes([PWM]))
-        self.__PWM = PWM
+        self.PWM = PWM
         return 0
 
     def aktualizuj_se(self):
-        self.__enkoder.aktualizuj_se()
+        self.enkoder.aktualizuj_se()
         cas_ted = ticks_us()
-        cas_rozdil = ticks_diff(cas_ted, self.__cas_posledni_regulace)
+        cas_rozdil = ticks_diff(cas_ted, self.cas_posledni_regulace)
         navratova_hodnota = 0
-        if cas_rozdil > self.__perioda_regulace:
-            navratova_hodnota = self.__reguluj_otacky()
-            self.__cas_posledni_regulace = cas_ted
+        if cas_rozdil > self.perioda_regulace:
+            navratova_hodnota = self.reguluj_otacky()
+            self.cas_posledni_regulace = cas_ted
 
         return navratova_hodnota
 
-    def __reguluj_otacky(self):
+    def reguluj_otacky(self):
 
-        if not self.__inicializovano:
+        if not self.inicializovano:
             return -1
 
-        if not self.__rychlost_byla_zadana:
+        if not self.rychlost_byla_zadana:
             return -2
 
         P = 6
 
-        self.aktualni_rychlost = self.__enkoder.vypocti_rychlost()
+        self.aktualni_rychlost = self.enkoder.vypocti_rychlost()
 
-        if self.__pozadovana_uhlova_r_kola < 0:
+        if self.pozadovana_uhlova_r_kola < 0:
             self.aktualni_rychlost *= -1
 
-        error = self.__pozadovana_uhlova_r_kola - self.aktualni_rychlost
+        error = self.pozadovana_uhlova_r_kola - self.aktualni_rychlost
         akcni_zasah = P*error
-        return self.__zmen_PWM_o(akcni_zasah)
+        return self.zmen_PWM_o(akcni_zasah)
 
-    def __zmen_PWM_o(self, akcni_zasah):
+    def zmen_PWM_o(self, akcni_zasah):
 
         akcni_zasah = int(akcni_zasah)
 
-        if self.__smer == K.DOZADU:
+        if self.smer == K.DOZADU:
             akcni_zasah *= -1
 
-        nove_PWM = self.__PWM + akcni_zasah
+        nove_PWM = self.PWM + akcni_zasah
 
-        return self.__jed_PWM(nove_PWM)
+        return self.jed_PWM(nove_PWM)
 
 class Robot:
 
