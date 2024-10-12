@@ -405,6 +405,20 @@ class Robot:
             if not data[K.LV_S_CARY] and not data[K.PR_S_CARY]:
                 self.jed(dopredna, 0)
 
+    def popojed(self, dopredna, perioda_us):
+
+        if self.__posledni_cas_popojeti == 0:
+            self.__posledni_cas_popojeti = ticks_us()
+
+        cas_ted = ticks_us()
+        if ticks_diff(cas_ted, self.__posledni_cas_popojeti) > perioda_us:
+            self.__posledni_cas_popojeti = 0
+            self.jed(0,0)
+            return True
+        else:
+            self.jed(dopredna, 0)
+            return False
+
 class Obrazovka:
     def pis(text):
         display.show(text[0])
