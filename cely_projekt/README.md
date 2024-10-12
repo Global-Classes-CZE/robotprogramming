@@ -4,6 +4,7 @@
 
 ### Přidán stavový automat pro test detekce křižovatek
 
+
 - soubor state_machine_krizovatky_rovne.py
 - Kód vám umožní splnit podúkol 1 projektu pro začátečníky - tedy vyzkoušet robustnost detekce křižovatek.
 - V kódu je nastaveno 10 příkazů rovně
