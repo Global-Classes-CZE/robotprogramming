@@ -1,7 +1,6 @@
 from microbit import i2c, sleep
-from microbit import pin14, pin15, pin0
+from microbit import pin2, pin14, pin15, pin0
 from microbit import display
-
 from neopixel import NeoPixel
 
 from utime import ticks_us, ticks_diff
@@ -355,6 +354,11 @@ class Robot:
 
         return 0
 
+
+    # zmer napajeci napeti robota
+    def zmer_a_vrat_napajeci_napeti(self):
+        return 0.00898 * pin2.read_analog()
+
     def __aktualni_rychlost(self):
         levy_r = self.__levy_motor.aktualni_rychlost * self.__prumer_kola/2
         pravy_r = self.__pravy_motor.aktualni_rychlost * self.__prumer_kola/2
@@ -540,6 +544,7 @@ class SvetelnyModul:
         self.blinkry[2].vypni()
         self.blinkry[1].vypni()
         self.blinkry[3].vypni()
+<<<<<<< HEAD
 
 class KalibracniFaktory:
 
@@ -549,3 +554,5 @@ class KalibracniFaktory:
         self.min_pwm_dojezd = min_pwm_dojezd
         self.a = a
         self.b = b
+=======
+>>>>>>> 088e9f829e22dd51594ee0e44baa6a5af7ce8eb8
