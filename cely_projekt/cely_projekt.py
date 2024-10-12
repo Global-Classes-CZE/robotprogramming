@@ -544,7 +544,7 @@ class SvetelnyModul:
         self.blinkry[2].vypni()
         self.blinkry[1].vypni()
         self.blinkry[3].vypni()
-    
+
 class KalibracniFaktory:
 
     def __init__(self, min_rychlost, min_pwm_rozjezd, min_pwm_dojezd, a, b):
