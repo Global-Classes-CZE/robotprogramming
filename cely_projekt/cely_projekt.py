@@ -1,7 +1,6 @@
 from microbit import i2c, sleep
 from microbit import pin2, pin14, pin15, pin0
 from microbit import display
-from neopixel import NeoPixel
 
 from utime import ticks_us, ticks_diff
 
@@ -83,78 +82,78 @@ class Senzory:
 class Enkoder:
 
     def __init__(self, jmeno, perioda_rychlosti=1, nova_verze=True, debug=False):
-        self.__jmeno = jmeno
-        self.__perioda_rychlosti = perioda_rychlosti*1000000  # na us
+        self.jmeno = jmeno
+        self.perioda_rychlosti = perioda_rychlosti*1000000  # na us
 
-        self.__nova_verze = nova_verze
-        self.__tiky = 0
-        self.__posledni_hodnota = -1
-        self.__tiky_na_otocku = 40
-        self.__nova_verze = nova_verze
-        self.__DEBUG = debug
-        self.__inicializovano = False
-        self.__cas_posledni_rychlosti = ticks_us()
-        self.__radiany_za_sekundu = 0
+        self.nova_verze = nova_verze
+        self.tiky = 0
+        self.posledni_hodnota = -1
+        self.tiky_na_otocku = 40
+        self.nova_verze = nova_verze
+        self.DEBUG = debug
+        self.inicializovano = False
+        self.cas_posledni_rychlosti = ticks_us()
+        self.radiany_za_sekundu = 0
 
-        if not self.__nova_verze:
-            self.__senzory = Senzory(False, debug)
+        if not self.nova_verze:
+            self.senzory = Senzory(False, debug)
 
     def inicializuj(self):
-        self.__posledni_hodnota = self.__aktualni_hodnota()
-        self.__inicializovano = True
+        self.posledni_hodnota = self.aktualni_hodnota()
+        self.inicializovano = True
 
-    def __aktualni_hodnota(self):
-        if self.__nova_verze:
-            if self.__jmeno == K.PR_ENKODER:
+    def aktualni_hodnota(self):
+        if self.nova_verze:
+            if self.jmeno == K.PR_ENKODER:
                 return pin15.read_digital()
-            elif self.__jmeno == K.LV_ENKODER:
+            elif self.jmeno == K.LV_ENKODER:
                 return pin14.read_digital()
             else:
                 return -2
         else:
-            senzoricka_data = self.__senzory.precti_senzory()
+            senzoricka_data = self.senzory.precti_senzory()
 
-            if self.__jmeno == K.LV_ENKODER or self.__jmeno == K.PR_ENKODER:
-                return int(senzoricka_data[self.__jmeno])
+            if self.jmeno == K.LV_ENKODER or self.jmeno == K.PR_ENKODER:
+                return int(senzoricka_data[self.jmeno])
             else:
                 return -2
 
     def aktualizuj_se(self):
-        if self.__DEBUG:
-            print("v aktualizuj", self.__tiky)
-        if self.__posledni_hodnota == -1:
-            if self.__DEBUG:
-                print("posledni_hodnota neni nastavena", self.__posledni_hodnota)
+        if self.DEBUG:
+            print("v aktualizuj", self.tiky)
+        if self.posledni_hodnota == -1:
+            if self.DEBUG:
+                print("posledni_hodnota neni nastavena", self.posledni_hodnota)
             return -1
 
-        aktualni_enkoder = self.__aktualni_hodnota()
-        if self.__DEBUG:
+        aktualni_enkoder = self.aktualni_hodnota()
+        if self.DEBUG:
             print("aktualni enkoder", aktualni_enkoder)
 
         if aktualni_enkoder >= 0:  # nenastaly zadne chyby
-            if self.__posledni_hodnota != aktualni_enkoder:
-                self.__posledni_hodnota = aktualni_enkoder
-                self.__tiky += 1
+            if self.posledni_hodnota != aktualni_enkoder:
+                self.posledni_hodnota = aktualni_enkoder
+                self.tiky += 1
         else:
             return aktualni_enkoder
 
         return 0
 
-    def __us_na_s(self, cas):
+    def us_na_s(self, cas):
         return cas/1000000
 
     def vypocti_rychlost(self):
         cas_ted = ticks_us()
-        interval_us = ticks_diff(cas_ted, self.__cas_posledni_rychlosti)
-        if interval_us >= self.__perioda_rychlosti:
-            interval_s = self.__us_na_s(interval_us)
-            otacky = self.__tiky/self.__tiky_na_otocku
+        interval_us = ticks_diff(cas_ted, self.cas_posledni_rychlosti)
+        if interval_us >= self.perioda_rychlosti:
+            interval_s = self.us_na_s(interval_us)
+            otacky = self.tiky/self.tiky_na_otocku
             radiany = otacky * 2 * K.PI
-            self.__radiany_za_sekundu = radiany / interval_s
-            self.__tiky = 0
-            self.__cas_posledni_rychlosti = cas_ted
+            self.radiany_za_sekundu = radiany / interval_s
+            self.tiky = 0
+            self.cas_posledni_rychlosti = cas_ted
 
-        return self.__radiany_za_sekundu
+        return self.radiany_za_sekundu
 
 class Motor:
     def __init__(self, jmeno, prumer_kola, kalibrace, nova_verze=True, debug=False):
