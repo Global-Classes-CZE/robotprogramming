@@ -1,5 +1,20 @@
 # Changelog/ Seznam změn
 
+## 13.10.
+
+### Přidána autokalibrace
+
+- před každou jízdou robota, je potřeba volat robot.kalibruj(od, do, ink), kde:
+ - od - je spodní hranice pwm
+ - do - je horní hranice pwm (doporučuji nejít přes 200, protože pak je průběh nelineární)
+ - ink - jak se zvyšuje ze začátku pwm, musí být vždy pozitivní, doporučuji min 1 max 10
+ 
+### Odstraněny kalibrační faktory
+
+- protože máme autokalibraci, už zase nepotřebujeme kalibační faktory :D
+
+### Zaintegrovaná kalibrace do úkazkové state machine
+
 ## 12.10.
 
 ### Přidán stavový automat pro test detekce křižovatek
