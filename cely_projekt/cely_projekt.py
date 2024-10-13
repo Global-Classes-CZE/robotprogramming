@@ -1,6 +1,6 @@
 from microbit import i2c, sleep
 from microbit import pin2, pin14, pin15, pin0
-from microbit import display
+from microbit import display, button_a
 
 from utime import ticks_us, ticks_diff
 
@@ -156,7 +156,7 @@ class Enkoder:
         return self.radiany_za_sekundu
 
 class Motor:
-    def __init__(self, jmeno, prumer_kola, kalibrace, nova_verze=True, debug=False):
+    def __init__(self, jmeno, prumer_kola, nova_verze=True, debug=False):
         if jmeno == K.LEVY:
             self.kanal_dopredu = b"\x05"
             self.kanal_dozadu = b"\x04"
@@ -165,8 +165,6 @@ class Motor:
             self.kanal_dozadu = b"\x02"
         else:
             raise AttributeError("spatne jmeno motoru, musi byt \"levy\" a nebo \"pravy\", zadane jmeno je" + str(jmeno))
-
-        self.kalibrace = kalibrace
 
         self.DEBUG = debug
         self.jmeno = jmeno
@@ -179,6 +177,11 @@ class Motor:
         self.perioda_regulace = 1000000 #v microsekundach
         self.cas_posledni_regulace = 0
         self.aktualni_rychlost = 0
+
+        self.rych_rozjezd = -1
+        self.pwm_rozjezd = -1
+        self.a = 0
+        self.b = 0
 
     def inicializuj(self):
         i2c.write(0x70, b"\x00\x01")
@@ -220,7 +223,10 @@ class Motor:
         if uhlova == 0: #TODO uvazuj, zda tohle by nemelo byt pod min rozjezd rychlost
             return 0
         else:
-            return int(self.kalibrace.a*uhlova + self.kalibrace.b)
+            if self.zkalibrovano:
+                return int(self.a*uhlova + self.b)
+            else:
+                return -1
 
     def jed_PWM(self, PWM):
         je_vse_ok = -2
@@ -258,16 +264,19 @@ class Motor:
         self.PWM = PWM
         return 0
 
-    def aktualizuj_se(self):
+    def aktualizuj_se(self, s_regulaci):
         self.enkoder.aktualizuj_se()
-        cas_ted = ticks_us()
-        cas_rozdil = ticks_diff(cas_ted, self.cas_posledni_regulace)
-        navratova_hodnota = 0
-        if cas_rozdil > self.perioda_regulace:
-            navratova_hodnota = self.reguluj_otacky()
-            self.cas_posledni_regulace = cas_ted
+        if s_regulaci:
+            cas_ted = ticks_us()
+            cas_rozdil = ticks_diff(cas_ted, self.cas_posledni_regulace)
+            navratova_hodnota = 0
+            if cas_rozdil > self.perioda_regulace:
+                navratova_hodnota = self.reguluj_otacky()
+                self.cas_posledni_regulace = cas_ted
 
-        return navratova_hodnota
+            return navratova_hodnota
+        else:
+            return 0
 
     def reguluj_otacky(self):
 
@@ -299,17 +308,48 @@ class Motor:
 
         return self.jed_PWM(nove_PWM)
 
+    def kalibruj(self, rych, pwm):
+
+        if self.pwm_rozjezd == -1:
+            return -1
+
+        roz_rych = rych- self.rych_rozjezd
+        roz_pwm = pwm - self.pwm_rozjezd
+
+        if roz_rych == 0 or roz_pwm ==0:
+            return -2
+
+        self.a = roz_pwm/roz_rych
+        self.b = pwm - self.a*rych
+        self.zkalibrovano = True
+        return 0
+
+    def min_rychlost(self, pwm):
+
+        rych = self.enkoder.vypocti_rychlost()
+
+        if rych > 0:
+            if self.pwm_rozjezd == -1:
+                self.pwm_rozjezd= pwm
+                self.rych_rozjezd = rych
+        elif rych == 0:
+            if self.pwm_rozjezd != -1:
+                self.pwm_rozjezd = -1
+                self.rych_rozjezd = 0
+
+        return rych
+
 class Robot:
 
-    def __init__(self, rozchod_kol: float, prumer_kola: float, kalibrace_levy, kalibrace_pravy, nova_verze=True):
+    def __init__(self, rozchod_kol: float, prumer_kola: float, nova_verze=True):
         """
         Konstruktor tridy
         """
         self.__d = rozchod_kol/2
         self.__prumer_kola = prumer_kola
 
-        self.__levy_motor = Motor(K.LEVY, self.__prumer_kola, kalibrace_levy, nova_verze)
-        self.__pravy_motor = Motor(K.PRAVY, self.__prumer_kola, kalibrace_pravy, nova_verze)
+        self.__levy_motor = Motor(K.LEVY, self.__prumer_kola, nova_verze)
+        self.__pravy_motor = Motor(K.PRAVY, self.__prumer_kola, nova_verze)
         self.__inicializovano = False
         self.__cas_minule_reg = ticks_us()
         self.__perioda_regulace = 1000000
@@ -329,6 +369,88 @@ class Robot:
 
         self.jed(0,0)
         return True
+
+    def kalibruj(self, od, do, ink):
+        if not self.__inicializovano:
+            return -1
+
+        if od >=do:
+            return -2
+
+        if 0 <= od <=255:
+            if 0 <= do <= 255:
+                pass
+            else:
+                return -2
+        else:
+            return -2
+
+        if ink <= 0:
+            return -2
+
+        self.__levy_motor.smer = K.DOPREDU
+        self.__pravy_motor.smer = K.DOZADU
+
+        pwm = od
+
+        l_rych = -1
+        p_rych = -1
+        button_a.was_pressed() # cteni zpusobi vynulovani stavu
+
+        while pwm <= do:
+            if button_a.was_pressed():
+                break
+
+            error = self.__levy_motor.jed_PWM(pwm)
+            if error != 0:
+                break
+            error = self.__pravy_motor.jed_PWM(pwm)
+            if error != 0:
+                break
+
+            cas_minule = ticks_us()
+            cas_ted = cas_minule
+
+            while ticks_diff(cas_ted, cas_minule) < 1000000:
+                cas_ted = ticks_us()
+                error = self.__levy_motor.aktualizuj_se(False)
+                if error < 0:
+                    break
+                error = self.__pravy_motor.aktualizuj_se(False)
+                if error < 0:
+                    break
+                sleep(5)
+
+            if error < 0:
+                break
+
+            l_rych = self.__levy_motor.min_rychlost(pwm)
+            p_rych = self.__pravy_motor.min_rychlost(pwm)
+
+            if pwm != do:
+                if l_rych > 0 and p_rych > 0:
+                    pwm = do
+                    continue
+
+            pwm += ink
+
+        error = self.__levy_motor.jed_PWM(0)
+        error = self.__pravy_motor.jed_PWM(0)
+
+        error = self.__levy_motor.kalibruj(l_rych, pwm-ink)
+        if error == -1:
+            return -3
+        elif error == -2:
+            return -4
+
+        error = self.__pravy_motor.kalibruj(p_rych, pwm-ink)
+        if error == -1:
+            return -5
+        elif error == -2:
+            return -6
+
+        return 0
+
 
     # pokrocily ukol 7
     def jed(self, dopredna_rychlost: float, uhlova_rychlost: float):
@@ -365,12 +487,9 @@ class Robot:
         print("aktualizuju", levy_r, pravy_r, v, omega)
         return v, omega
 
-    def aktualizuj_se(self):
-        self.__levy_motor.aktualizuj_se()
-        self.__pravy_motor.aktualizuj_se()
-
-        if ticks_diff(ticks_us(), self.__cas_minule_reg) > self.__perioda_regulace:
-            self.__cas_minule_reg = ticks_us()
+    def aktualizuj_se(self, s_motor_regulaci):
+        self.__levy_motor.aktualizuj_se(s_motor_regulaci)
+        self.__pravy_motor.aktualizuj_se(s_motor_regulaci)
 
     def vycti_senzory_cary(self):
 
@@ -422,12 +541,3 @@ class Obrazovka:
     def pis(text):
         display.show(text[0])
         print(text)
-
-class KalibracniFaktory:
-
-    def __init__(self, min_rychlost, min_pwm_rozjezd, min_pwm_dojezd, a, b):
-        self.min_rychlost = min_rychlost
-        self.min_pwm_rozjezd = min_pwm_rozjezd
-        self.min_pwm_dojezd = min_pwm_dojezd
-        self.a = a
-        self.b = b
