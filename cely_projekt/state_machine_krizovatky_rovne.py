@@ -6,6 +6,7 @@ from utime import ticks_diff, ticks_us
 if __name__ == "__main__":
 
     st_start = "START"
+    st_kalibruj = "KALIBRUJ"
     st_jed_po_care = "JED_PO_CARE"
     st_reaguj_na_krizovatku = "REAGUJ_NA_KRIZOVATKU"
     st_stop = "EXIT"
@@ -15,10 +16,7 @@ if __name__ == "__main__":
     Obrazovka.pis(stav)
     index_prikazu = 0
 
-    # zmente na vase kalibracni faktory
-    kalib_l = KalibracniFaktory(0.93, 51, 37, 17.08, 28.64)
-    kalib_p = KalibracniFaktory(1.39, 55, 47, 20.98, 60.16)
-    robot = Robot(0.15, 0.067, kalib_l, kalib_p, False)
+    robot = Robot(0.15, 0.067, False)
 
     # zmente na vase prikazy
     prikazy = [K.ROVNE] * 10
@@ -32,8 +30,15 @@ if __name__ == "__main__":
     while not button_a.was_pressed():
         if stav == st_start:
             if robot.inicializuj():
-                stav = st_jed_po_care
+                stav = st_kalibruj
                 Obrazovka.pis(stav)
+
+        if stav == st_kalibruj:
+            if robot.kalibruj(100,200,10) == 0:
+                stav = st_cekam_na_tlacitko
+                Obrazovka.pis(stav)
+            else:
+                break
 
         elif stav == st_jed_po_care:
             situace = robot.vycti_senzory_cary()
@@ -81,7 +86,7 @@ if __name__ == "__main__":
             robot.jed(0, 0)
             break
 
-        robot.aktualizuj_se()
+        robot.aktualizuj_se(False)
         sleep(5)
 
     robot.jed(0, 0)
