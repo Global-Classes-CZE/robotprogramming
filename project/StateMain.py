@@ -19,9 +19,10 @@ class StateMain(StateAbstract):
 
     def __run(self):
         sm = StateMove(self.__robot, [
+            Step('stop',1000),
             Task('cruiseControl', 250),
-            Step('left'),
-            Step('right'),
+            Step('stop'),
+            # Step('right'),
         ], 1000)
         self.add2SMQ(sm)
 

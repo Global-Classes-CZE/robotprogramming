@@ -93,4 +93,4 @@ if __name__ == "__main__":
     # robot.go(0, 0)
     # robot.jed(0, 0)
 
-    robot.goPWM(0)
+    robot.move().goV(0)

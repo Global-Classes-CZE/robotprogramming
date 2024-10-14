@@ -9,39 +9,39 @@ class StateMove(StateAbstract):
         self.__robot = robot
         super().__init__(tasks, tick_time)
 
+        self.__counter = 0
+
     def __cruiseControl(self):
-        self.__robot.goPWM(130)
+        self.__robot.move().goV(0.4)
 
-    def __cruiseControl__tick(self):
-        print('__cruiseControl__tick')
+    def __cruiseControl__tick(self):  # Tempomat
+        v_min_error = 0.005  # m/s - prepoctu 1 tik na radiany → prepoctu na rychlost
+        distance_max_error = 0.01  # m error senzoru
+        p = v_min_error / distance_max_error
 
+        r = -0.2  # 20 cm pred prekazkou se chci zastavit
+        v_max = 0.5  # rychleji jet nechci
 
-
-        r = -0.2  # reference 20 cm
         y = UltrasoundReader().getDistance()  # aktualni hodnota
-        e = r - y  # error
-        max_pwm = 135  # max PWM je 255, ale ja chci jen 135
-        max_error = 1.2  # zpomaluj 1.2 m pred prekazkou
-        p = max_pwm / max_error
-        max_action_hit = p * max_error  # maximalni akcni zasah
-        u = e * p  # akcni zasah
-        pwm = min(max_pwm, int(u))
-        print('y=' + str(y), 'e=' + str(e), 'p=' + str(p), 'u=' + str(u), 'pwn=' + str(pwm))
-        self.__robot.goPWM(pwm)
-    #
-    #     # distance =
-    #     # pwmBase = 130
-    #     # error = distance - 20
-    #     # self.__robot.goPWM(130)
+        if y < 0:
+            return
+
+        e = r + y
+        u = e * p
+
+        v = max(min(v_max, u), v_max * -1)
+
+        # print('y=' + str(y), 'e=' + str(e), 'p=' + str(p), 'u=' + str(u), 'v=' + str(v))
+        self.__robot.move().goV(v)
 
     def __forward(self):
-        self.__robot.goPWM(200)
+        self.__robot.move().goV(0)
 
     def __left(self):
-        self.__robot.goPWM(0, -1000)
+        self.__robot.move().goV(0)
 
     def __right(self):
-        self.__robot.goPWM(0, 1000)
+        self.__robot.move().goV(0)
 
     def __stop(self):
-        self.__robot.goPWM(0)
+        self.__robot.move().goV(0)

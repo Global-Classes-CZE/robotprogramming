@@ -21,8 +21,11 @@ class Period:
     def reset(self):
         self.__lastTime = ticks_ms()
 
-    def getLastDiff(self) -> int:
+    def getDiff(self) -> int:
         return self.__lastDiff
+
+    def getTime(self) -> int:
+        return self.__lastTime
 
     def setTickTime(self, n: [int, None]):
         self.__tickTime = n

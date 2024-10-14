@@ -39,7 +39,7 @@ class UltrasoundReader:
         self.__triggerPin.write_digital(0)
         self.__echoPin.read_digital()
 
-    def getDistance(self) -> int:
+    def getDistance(self) -> float:
         self.__triggerPin.write_digital(0)
         self.__triggerPin.write_digital(1)
 
