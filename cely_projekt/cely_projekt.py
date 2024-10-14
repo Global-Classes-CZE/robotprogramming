@@ -49,7 +49,7 @@ class Senzory:
 
     def precti_senzory(self):
         surova_data_byte = i2c.read(0x38, 1)
-        bitove_pole = self.__byte_na_bity(surova_data_byte)
+        bitove_pole = self.byte_na_bity(surova_data_byte)
 
         senzoricka_data = {}
 
@@ -321,33 +321,31 @@ class Robot:
         """
         Konstruktor tridy
         """
-        self.__d = rozchod_kol/2
-        self.__prumer_kola = prumer_kola
+        self.d = rozchod_kol/2
+        self.prumer_kola = prumer_kola
 
-        self.__levy_motor = Motor(K.LEVY, self.__prumer_kola, nova_verze)
-        self.__pravy_motor = Motor(K.PRAVY, self.__prumer_kola, nova_verze)
-        self.__inicializovano = False
-        self.__cas_minule_reg = ticks_us()
-        self.__perioda_regulace = 1000000
-        self.__senzory = Senzory(nova_verze)
+        self.levy_motor = Motor(K.LEVY, prumer_kola, nova_verze)
+        self.pravy_motor = Motor(K.PRAVY, prumer_kola, nova_verze)
+        self.inicializovano = False
+        self.cas_minule_reg = ticks_us()
+        self.perioda_regulace = 1000000
+        self.senzory = Senzory(nova_verze)
 
-        self.__perioda_cary_us = 75000
+        self.perioda_cary_us = 75000
 
-        self.__posledni_cas_popojeti = 0
+        self.posledni_cas_popojeti = 0
 
     def inicializuj(self):
         i2c.init(400000)
-        self.__levy_motor.inicializuj()
-        self.__pravy_motor.inicializuj()
-        self.__inicializovano = True
-
-        self.__posledni_cas_reg_cary_us = ticks_us()
-
+        self.levy_motor.inicializuj()
+        self.pravy_motor.inicializuj()
+        self.inicializovano = True
+        self.posledni_cas_reg_cary_us = ticks_us()
         self.jed(0,0)
         return True
 
     def kalibruj(self, od, do, ink):
-        if not self.__inicializovano:
+        if not self.inicializovano:
             return -1
 
         if od >=do:
@@ -364,8 +362,8 @@ class Robot:
         if ink <= 0:
             return -2
 
-        self.__levy_motor.smer = K.DOPREDU
-        self.__pravy_motor.smer = K.DOZADU
+        self.levy_motor.smer = K.DOPREDU
+        self.pravy_motor.smer = K.DOZADU
 
         pwm = od
 
@@ -377,10 +375,10 @@ class Robot:
             if button_a.was_pressed():
                 break
 
-            error = self.__levy_motor.jed_PWM(pwm)
+            error = self.levy_motor.jed_PWM(pwm)
             if error != 0:
                 break
-            error = self.__pravy_motor.jed_PWM(pwm)
+            error = self.pravy_motor.jed_PWM(pwm)
             if error != 0:
                 break
 
@@ -389,10 +387,10 @@ class Robot:
 
             while ticks_diff(cas_ted, cas_minule) < 1000000:
                 cas_ted = ticks_us()
-                error = self.__levy_motor.aktualizuj_se(False)
+                error = self.levy_motor.aktualizuj_se(False)
                 if error < 0:
                     break
-                error = self.__pravy_motor.aktualizuj_se(False)
+                error = self.pravy_motor.aktualizuj_se(False)
                 if error < 0:
                     break
                 sleep(5)
@@ -400,8 +398,8 @@ class Robot:
             if error < 0:
                 break
 
-            l_rych = self.__levy_motor.min_rychlost(pwm)
-            p_rych = self.__pravy_motor.min_rychlost(pwm)
+            l_rych = self.levy_motor.min_rychlost(pwm)
+            p_rych = self.pravy_motor.min_rychlost(pwm)
 
             if pwm != do:
                 if l_rych > 0 and p_rych > 0:
@@ -410,16 +408,16 @@ class Robot:
 
             pwm += ink
 
-        error = self.__levy_motor.jed_PWM(0)
-        error = self.__pravy_motor.jed_PWM(0)
+        error = self.levy_motor.jed_PWM(0)
+        error = self.pravy_motor.jed_PWM(0)
 
-        error = self.__levy_motor.kalibruj(l_rych, pwm-ink)
+        error = self.levy_motor.kalibruj(l_rych, pwm-ink)
         if error == -1:
             return -3
         elif error == -2:
             return -4
 
-        error = self.__pravy_motor.kalibruj(p_rych, pwm-ink)
+        error = self.pravy_motor.kalibruj(p_rych, pwm-ink)
         if error == -1:
             return -5
         elif error == -2:
@@ -432,44 +430,38 @@ class Robot:
     def jed(self, dopredna_rychlost: float, uhlova_rychlost: float):
         """Pohybuj se zadanym  pohybem slozenym z dopredne rychlosti v a uhlove rychlosti"""
 
-        if not self.__inicializovano:
+        if not self.inicializovano:
             return -1
 
-        self.__dopredna_rychlost = dopredna_rychlost
-        self.__uhlova_rychlost = uhlova_rychlost
-        # kinematika diferencionalniho podvozku - lekce 7
-        dopr_rychlost_leve = dopredna_rychlost - self.__d * uhlova_rychlost
-        dopr_rychlost_prave = dopredna_rychlost + self.__d * uhlova_rychlost
+        self.dopredna_rychlost = dopredna_rychlost
+        self.uhlova_rychlost = uhlova_rychlost
+        dopr_rychlost_leve = dopredna_rychlost - self.d * uhlova_rychlost
+        dopr_rychlost_prave = dopredna_rychlost + self.d * uhlova_rychlost
 
-        # nevolam povely i2c rovnou - to bych rozbijela zapouzdreni trid
-        # vyuziji funkce tridy motor
-        self.__levy_motor.jed_doprednou_rychlosti(dopr_rychlost_leve)
-        self.__pravy_motor.jed_doprednou_rychlosti(dopr_rychlost_prave)
+        self.levy_motor.jed_doprednou_rychlosti(dopr_rychlost_leve)
+        self.pravy_motor.jed_doprednou_rychlosti(dopr_rychlost_prave)
 
         return 0
 
-
-    # zmer napajeci napeti robota
     def zmer_a_vrat_napajeci_napeti(self):
         return 0.00898 * pin2.read_analog()
 
-    def __aktualni_rychlost(self):
-        levy_r = self.__levy_motor.aktualni_rychlost * self.__prumer_kola/2
-        pravy_r = self.__pravy_motor.aktualni_rychlost * self.__prumer_kola/2
+    def aktualni_rychlost(self):
+        levy_r = self.levy_motor.aktualni_rychlost * self.prumer_kola/2
+        pravy_r = self.pravy_motor.aktualni_rychlost * self.prumer_kola/2
 
 
-        omega = (pravy_r - levy_r)/ (2 * self.__d)
-        v = levy_r + self.__d * omega
-        print("aktualizuju", levy_r, pravy_r, v, omega)
+        omega = (pravy_r - levy_r)/ (2 * self.d)
+        v = levy_r + self.d * omega
         return v, omega
 
     def aktualizuj_se(self, s_motor_regulaci):
-        self.__levy_motor.aktualizuj_se(s_motor_regulaci)
-        self.__pravy_motor.aktualizuj_se(s_motor_regulaci)
+        self.levy_motor.aktualizuj_se(s_motor_regulaci)
+        self.pravy_motor.aktualizuj_se(s_motor_regulaci)
 
     def vycti_senzory_cary(self):
 
-        senzoricka_data = self.__senzory.precti_senzory()
+        senzoricka_data = self.senzory.precti_senzory()
 
         if senzoricka_data[K.LV_S_CARY] and senzoricka_data[K.PR_S_CARY]:
             return K.KRIZOVATKA
@@ -486,9 +478,9 @@ class Robot:
     def jed_po_care(self, dopredna, uhlova):
         cas_ted = ticks_us()
 
-        if ticks_diff(cas_ted, self.__posledni_cas_reg_cary_us) > self.__perioda_cary_us:
-            self.__posledni_cas_reg_cary_us = cas_ted
-            data = self.__senzory.precti_senzory()
+        if ticks_diff(cas_ted, self.posledni_cas_reg_cary_us) > self.perioda_cary_us:
+            self.posledni_cas_reg_cary_us = cas_ted
+            data = self.senzory.precti_senzory()
 
             if data[K.LV_S_CARY]:
                 self.jed(dopredna, uhlova)
@@ -501,12 +493,12 @@ class Robot:
 
     def popojed(self, dopredna, perioda_us):
 
-        if self.__posledni_cas_popojeti == 0:
-            self.__posledni_cas_popojeti = ticks_us()
+        if self.posledni_cas_popojeti == 0:
+            self.posledni_cas_popojeti = ticks_us()
 
         cas_ted = ticks_us()
-        if ticks_diff(cas_ted, self.__posledni_cas_popojeti) > perioda_us:
-            self.__posledni_cas_popojeti = 0
+        if ticks_diff(cas_ted, self.posledni_cas_popojeti) > perioda_us:
+            self.posledni_cas_popojeti = 0
             self.jed(0,0)
             return True
         else:
@@ -515,7 +507,7 @@ class Robot:
 
     def zatoc(self, dopredna, uhlova, senzor):
 
-        senzoricka_data = self.__senzory.precti_senzory()
+        senzoricka_data = self.senzory.precti_senzory()
         hodnota_senzoru = senzoricka_data[senzor]
 
         if hodnota_senzoru:
