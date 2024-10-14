@@ -6,45 +6,35 @@ from utime import ticks_us, ticks_diff
 
 class K:
     NEDEFINOVANO = "nedefinovano"
-
     LEVY = "levy"
     PRAVY = "pravy"
-
     DOPREDU = "dopredu"
     DOZADU = "dozadu"
-
     ENKODER = "enkoder"
     PR_ENKODER = PRAVY + "_" + ENKODER
     LV_ENKODER = LEVY + "_" + ENKODER
-
     IR = "IR"
     PR_IR = PRAVY + "_" + IR
     LV_IR = LEVY + "_" + IR
-
     SENZOR_CARY = "senzor_cary"
     PR_S_CARY = PRAVY + "_" + SENZOR_CARY
     LV_S_CARY = LEVY + "_" + SENZOR_CARY
     PROS_S_CARY = "prostredni_" + SENZOR_CARY
-
     PI = 3.14159265359
-
     CARA = "cara"
     KRIZOVATKA = "krizovatka"
     ZTRACEN = "ztracen"
     ZATOC = "zatoc"
-
     ROVNE = "rovne"
     VPRAVO = "vpravo"
     VLEVO = "vlevo"
     VZAD = "vzad"
-
     VSE = "vse"
-
 
 class Senzory:
 
-    def __init__(self, nova_verze=True):
-        self.nova_verze = nova_verze
+    def __init__(self, verze=True):
+        self.verze = verze
         i2c.init(400000)
 
     def precti_senzory(self):
@@ -53,7 +43,7 @@ class Senzory:
 
         senzoricka_data = {}
 
-        if not self.nova_verze:
+        if not self.verze:
             senzoricka_data[K.LV_ENKODER] = bitove_pole[9]
             senzoricka_data[K.PR_ENKODER] = bitove_pole[8]
 
@@ -66,28 +56,25 @@ class Senzory:
         return senzoricka_data
 
     def byte_na_bity(self, data_bytes):
-
         data_int = int.from_bytes(data_bytes, "big")
         bit_pole_string = bin(data_int)
-
         return bit_pole_string
 
 class Enkoder:
 
-    def __init__(self, jmeno, perioda_rychlosti=1, nova_verze=True):
+    def __init__(self, jmeno, perioda_rychlosti=1, verze=True):
         self.jmeno = jmeno
         self.perioda_rychlosti = perioda_rychlosti*1000000  # na us
 
-        self.nova_verze = nova_verze
+        self.verze = verze
         self.tiky = 0
         self.posledni_hodnota = -1
         self.tiky_na_otocku = 40
-        self.nova_verze = nova_verze
         self.inicializovano = False
         self.cas_posledni_rychlosti = ticks_us()
         self.radiany_za_sekundu = 0
 
-        if not self.nova_verze:
+        if not self.verze:
             self.senzory = Senzory(False)
 
     def inicializuj(self):
@@ -95,7 +82,7 @@ class Enkoder:
         self.inicializovano = True
 
     def aktualni_hodnota(self):
-        if self.nova_verze:
+        if self.verze:
             if self.jmeno == K.PR_ENKODER:
                 return pin15.read_digital()
             elif self.jmeno == K.LV_ENKODER:
@@ -140,7 +127,7 @@ class Enkoder:
         return self.radiany_za_sekundu
 
 class Motor:
-    def __init__(self, jmeno, prumer_kola, nova_verze=True):
+    def __init__(self, jmeno, prumer_kola, verze=True):
         if jmeno == K.LEVY:
             self.kanal_dopredu = b"\x05"
             self.kanal_dozadu = b"\x04"
@@ -152,7 +139,7 @@ class Motor:
 
         self.jmeno = jmeno
         self.prumer_kola = prumer_kola
-        self.enkoder = Enkoder(jmeno + "_enkoder", 1, nova_verze)
+        self.enkoder = Enkoder(jmeno + "_enkoder", 1, verze)
         self.smer = K.NEDEFINOVANO
         self.inicializovano = False
         self.rychlost_byla_zadana = False
@@ -317,19 +304,19 @@ class Motor:
 
 class Robot:
 
-    def __init__(self, rozchod_kol: float, prumer_kola: float, nova_verze=True):
+    def __init__(self, rozchod_kol: float, prumer_kola: float, verze=True):
         """
         Konstruktor tridy
         """
         self.d = rozchod_kol/2
         self.prumer_kola = prumer_kola
 
-        self.levy_motor = Motor(K.LEVY, prumer_kola, nova_verze)
-        self.pravy_motor = Motor(K.PRAVY, prumer_kola, nova_verze)
+        self.levy_motor = Motor(K.LEVY, prumer_kola, verze)
+        self.pravy_motor = Motor(K.PRAVY, prumer_kola, verze)
         self.inicializovano = False
         self.cas_minule_reg = ticks_us()
         self.perioda_regulace = 1000000
-        self.senzory = Senzory(nova_verze)
+        self.senzory = Senzory(verze)
 
         self.perioda_cary_us = 75000
 
