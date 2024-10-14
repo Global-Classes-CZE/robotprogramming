@@ -43,22 +43,19 @@ class K:
 
 class Senzory:
 
-    def __init__(self, nova_verze=True, debug=False):
+    def __init__(self, nova_verze=True):
         self.nova_verze = nova_verze
-        self.DEBUG = debug
         i2c.init(400000)
 
     def precti_senzory(self):
         surova_data_byte = i2c.read(0x38, 1)
-        if self.DEBUG:
-            print("surova data", surova_data_byte)
         bitove_pole = self.__byte_na_bity(surova_data_byte)
 
         senzoricka_data = {}
 
         if not self.nova_verze:
             senzoricka_data[K.LV_ENKODER] = bitove_pole[9]
-            senzoricka_data[K.PR_ENKODER] = bitove_pole[8] #TODO pretipuj taky, ale otestuj!
+            senzoricka_data[K.PR_ENKODER] = bitove_pole[8]
 
         senzoricka_data[K.LV_S_CARY] = bool(int(bitove_pole[7]))
         senzoricka_data[K.PROS_S_CARY] = bool(int(bitove_pole[6]))
@@ -68,20 +65,16 @@ class Senzory:
 
         return senzoricka_data
 
-    def __byte_na_bity(self, data_bytes):
+    def byte_na_bity(self, data_bytes):
 
         data_int = int.from_bytes(data_bytes, "big")
         bit_pole_string = bin(data_int)
-
-        if self.DEBUG:
-            print("data_int", data_int)
-            print("bit pole", bit_pole_string)
 
         return bit_pole_string
 
 class Enkoder:
 
-    def __init__(self, jmeno, perioda_rychlosti=1, nova_verze=True, debug=False):
+    def __init__(self, jmeno, perioda_rychlosti=1, nova_verze=True):
         self.jmeno = jmeno
         self.perioda_rychlosti = perioda_rychlosti*1000000  # na us
 
@@ -90,13 +83,12 @@ class Enkoder:
         self.posledni_hodnota = -1
         self.tiky_na_otocku = 40
         self.nova_verze = nova_verze
-        self.DEBUG = debug
         self.inicializovano = False
         self.cas_posledni_rychlosti = ticks_us()
         self.radiany_za_sekundu = 0
 
         if not self.nova_verze:
-            self.senzory = Senzory(False, debug)
+            self.senzory = Senzory(False)
 
     def inicializuj(self):
         self.posledni_hodnota = self.aktualni_hodnota()
@@ -119,24 +111,16 @@ class Enkoder:
                 return -2
 
     def aktualizuj_se(self):
-        if self.DEBUG:
-            print("v aktualizuj", self.tiky)
         if self.posledni_hodnota == -1:
-            if self.DEBUG:
-                print("posledni_hodnota neni nastavena", self.posledni_hodnota)
             return -1
 
         aktualni_enkoder = self.aktualni_hodnota()
-        if self.DEBUG:
-            print("aktualni enkoder", aktualni_enkoder)
-
-        if aktualni_enkoder >= 0:  # nenastaly zadne chyby
+        if aktualni_enkoder >= 0:
             if self.posledni_hodnota != aktualni_enkoder:
                 self.posledni_hodnota = aktualni_enkoder
                 self.tiky += 1
         else:
             return aktualni_enkoder
-
         return 0
 
     def us_na_s(self, cas):
@@ -156,7 +140,7 @@ class Enkoder:
         return self.radiany_za_sekundu
 
 class Motor:
-    def __init__(self, jmeno, prumer_kola, nova_verze=True, debug=False):
+    def __init__(self, jmeno, prumer_kola, nova_verze=True):
         if jmeno == K.LEVY:
             self.kanal_dopredu = b"\x05"
             self.kanal_dozadu = b"\x04"
@@ -166,10 +150,9 @@ class Motor:
         else:
             raise AttributeError("spatne jmeno motoru, musi byt \"levy\" a nebo \"pravy\", zadane jmeno je" + str(jmeno))
 
-        self.DEBUG = debug
         self.jmeno = jmeno
         self.prumer_kola = prumer_kola
-        self.enkoder = Enkoder(jmeno + "_enkoder", 1, nova_verze, debug)
+        self.enkoder = Enkoder(jmeno + "_enkoder", 1, nova_verze)
         self.smer = K.NEDEFINOVANO
         self.inicializovano = False
         self.rychlost_byla_zadana = False
@@ -196,24 +179,17 @@ class Motor:
             return -1
 
         self.pozadovana_uhlova_r_kola = self.dopredna_na_uhlovou(v)
-        if self.DEBUG:
-            print("pozadovana uhlova", self.pozadovana_uhlova_r_kola)
-
         self.rychlost_byla_zadana = True
 
         prvni_PWM = self.uhlova_na_PWM(abs(self.pozadovana_uhlova_r_kola))
-        if self.DEBUG:
-            print("prvni_PWM", prvni_PWM)
-
         if self.pozadovana_uhlova_r_kola > 0:
             self.smer = K.DOPREDU
         elif self.pozadovana_uhlova_r_kola < 0:
             self.smer = K.DOZADU
-        else: # = 0
+        else:
             self.smer == K.NEDEFINOVANO
 
         return self.jed_PWM(prvni_PWM)
-
 
     def dopredna_na_uhlovou(self, v: float):
         return v/(self.prumer_kola/2)
@@ -535,6 +511,18 @@ class Robot:
             return True
         else:
             self.jed(dopredna, 0)
+            return False
+
+    def zatoc(self, dopredna, uhlova, senzor):
+
+        senzoricka_data = self.__senzory.precti_senzory()
+        hodnota_senzoru = senzoricka_data[senzor]
+
+        if hodnota_senzoru:
+            self.jed(0,0)
+            return True
+        else:
+            self.jed(dopredna, uhlova)
             return False
 
 class Obrazovka:
