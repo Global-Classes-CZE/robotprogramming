@@ -428,13 +428,10 @@ class Robot:
 
     # pokrocily ukol 7
     def jed(self, dopredna_rychlost: float, uhlova_rychlost: float):
-        """Pohybuj se zadanym  pohybem slozenym z dopredne rychlosti v a uhlove rychlosti"""
 
         if not self.inicializovano:
             return -1
 
-        self.dopredna_rychlost = dopredna_rychlost
-        self.uhlova_rychlost = uhlova_rychlost
         dopr_rychlost_leve = dopredna_rychlost - self.d * uhlova_rychlost
         dopr_rychlost_prave = dopredna_rychlost + self.d * uhlova_rychlost
 
