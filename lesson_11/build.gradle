@@ -1,0 +1,233 @@
+/**
+ * Builds minified merged Python main.py and uploads it to Micro:Bit using 'ufs'.
+ * All major OSes should be supported.
+ *
+ * Tasks:
+ * clean     .. cleans build/ directory
+ * mini      .. minifies all sources into build/mini/
+ * buildMini .. builds the merged minified source into build/mini/main.py
+ * build     .. builds the merged (non-minified) source into build/main.py + calls buildMini
+ * upload    .. uploads merged main.py file of choice to Micro:Bit using ufs (see upload options below)
+ *
+ * Generic options:
+ * -Pmain={file.py}           .. specifies main.py file (last during merging), optional (autodetected),
+ *                               needed just when __main__ block is in multiple source files
+ * -Pinclude={file1,file2,..} .. adds extra files outside of project dir (all *.py files in project are included automatically)
+ * -Pexclude={file1,file2,..} .. removes files from the source file list
+ *
+ * Upload options:
+ * -Pmini  .. uploads minified version
+ * -Psudo  .. uses 'sudo ufs' instead od 'ufs' for upload (sometimes needed to override port ownership on Linux)
+ *
+ * Example build commands:
+ *
+ * Basic non-minified build and upload if sudo is not needed, all sources are in local dir + there's just one __main__ block:
+ * ./gradlew clean build upload
+ *
+ * Minified build with sudo upload and added source file from other directory:
+ * ./gradlew -Pmini -Psudo -Pinclude=../cely_projekt/cely_projekt.py clean build upload
+ */
+import java.nio.file.Files
+import java.util.stream.Collectors
+import java.util.stream.Stream
+
+ext {
+    useSudo = project.hasProperty('sudo')
+    useMini = project.hasProperty('mini')
+    miniDir = "${buildDir}/mini"
+    includedFiles = propertyCsvToFileList('include')
+    excludedFiles = propertyCsvToFileList('exclude')
+    mainFile = getMainFileName(includedFiles, excludedFiles)
+    // we need all local *.py sources, but we will need to exclude the indicated ones
+    // we also need to exclude main.py (or whatever was specified as main) and put it at the very end explicitly
+    sourceFiles = Stream.concat(
+            Stream.concat(
+                    includedFiles.stream(),
+                    Arrays.stream(projectDir.listFiles())
+                            .filter { f -> f.name.endsWith('.py') }
+            ).filter { f -> !f.equals(mainFile) && !excludedFiles.contains(f) },
+            Stream.of(mainFile)
+    ).toList()
+}
+
+task clean {
+    doLast {
+        logger.lifecycle("Cleaning ..")
+        delete "${buildDir}"
+    }
+}
+
+task minify {
+    doLast {
+        mkdir miniDir
+        sourceFiles.each { file ->
+            // our main.py is a merged file, we have to avoid name clash
+            def fileOut = file.name.replaceAll('^main\\.py$', 'main_.py')
+            exec {
+                workingDir projectDir
+                commandLine = [
+                        'pyminify', file.getPath(),
+                        '--remove-literal-statements',
+                        '--remove-class-attribute-annotations', '--no-rename-locals', '--no-hoist-literals',
+                        '--no-remove-explicit-return-none', '--no-remove-return-annotations',
+                        '--output', "${miniDir}/${fileOut}"
+                ]
+            }
+        }
+    }
+}
+
+def mergeSource(BufferedWriter writer, File source, Set<String> imports, Map<String, Set<String>> importsFrom) {
+    logger.lifecycle("Merging ${source}")
+    writer.newLine()
+    writer.newLine()
+    try (BufferedReader reader = new BufferedReader(new FileReader(source))) {
+        boolean header = true;
+        while (reader.ready()) {
+            String line = reader.readLine()
+            if (header) {
+                if (line.startsWith("class") || line.startsWith("def") || line.startsWith("if")) {
+                    header = false
+                } else if (line.startsWith("import")) {
+                    line = line.replaceFirst("import\\s+", "")
+                    imports.addAll(Arrays.asList(line.split(",\\s*")))
+                } else if (line.startsWith("from")) {
+                    String importSource = line.replaceAll("from (\\S+)\\s?.*\$", "\$1")
+                    String objects = line.replaceFirst("from\\s+(\\S+)\\s+import\\s+", "")
+                    importsFrom.computeIfAbsent(importSource, value -> new LinkedHashSet<>())
+                            .addAll(Arrays.asList(objects.split(",\\s*")))
+                }
+            }
+            if (!header) {
+                writer.write(line)
+                writer.newLine()
+            }
+        }
+    }
+}
+
+def mergeAll(File target, List<File> sourceFiles) {
+    def imports = new LinkedHashSet<String>()
+    def importsFrom = new LinkedHashMap<String, Set<String>>()
+    String body
+    try (StringWriter bodyWriter = new StringWriter()) {
+        try (BufferedWriter writer = new BufferedWriter((bodyWriter))) {
+            sourceFiles.each { source -> mergeSource(writer, source, imports, importsFrom) }
+        }
+        body = bodyWriter.toString()
+    }
+
+    List<String> classSources = sourceFiles.stream()
+            .map { it.name.replaceAll("\\.py", "").replaceAll(".*/", "") }
+            .collect(Collectors.toList())
+    try (BufferedWriter writer = new BufferedWriter((new FileWriter(target, false)))) {
+        logger.lifecycle("Merging all into ${target}")
+        String importsCsv = imports.stream()
+                .filter { !classSources.contains(it) }
+                .collect(Collectors.joining(", "))
+        if (!importsCsv.trim().isBlank()) {
+            writer.write("import ${importsCsv}")
+            writer.newLine()
+        }
+        importsFrom.entrySet().forEach { entry ->
+            if (!classSources.contains(entry.getKey())) {
+                def objects = String.join(", ", entry.getValue())
+                writer.write("from ${entry.getKey()} import ${objects}")
+                writer.newLine()
+            }
+        }
+        writer.write(body)
+    }
+}
+
+task buildMini {
+    dependsOn minify
+    doLast {
+        List<File> files = sourceFiles.stream()
+                .map { file ->
+                    // when we were minifying, we had to minify into an alternate name
+                    // to avoid target file name clash, here we need to use it as a new source
+                    new File(miniDir, file.name.replaceAll('^main\\.py$', 'main_.py'))
+                }
+                .toList()
+        mergeAll(new File(miniDir, "main.py"), files)
+    }
+}
+
+task build {
+    dependsOn buildMini
+    doLast {
+        mergeAll(new File(buildDir, "main.py"), sourceFiles)
+    }
+}
+
+task upload {
+    shouldRunAfter build
+    doLast {
+        def uploadFile = new File(useMini ? miniDir : buildDir, "main.py")
+        def cmd = useSudo ?
+                ['sudo', 'ufs', 'put', "${uploadFile}"] :
+                ['ufs', 'put', "${uploadFile}"]
+        logger.lifecycle("Uploading ${useSudo ? "(using sudo) " : ""}merged ${useMini ? "minified " : ""}${uploadFile}")
+        exec {
+            workingDir "${projectDir}"
+            commandLine = cmd
+        }
+    }
+}
+
+List<File> propertyCsvToFileList(String property) {
+    List<File> files = new ArrayList<>()
+    if (project.hasProperty(property)) {
+        List<String> patterns = Arrays.asList(project.getProperty(property).split(","))
+        files.addAll(
+                Arrays.<File>stream(projectDir.listFiles())
+                        .filter { f -> f.name.endsWith('.py') }
+                        .filter { f -> patterns.stream().anyMatch { p -> f.name.matches(p) } }
+                        .toList()
+        )
+    }
+    return files
+}
+
+/**
+ * Returns main file name from property (if defined), use main.py (if exists) or scan for content to find __main__.
+ */
+File getMainFileName(List<File> includedFiles, List<File> excludedFiles) {
+    if (project.hasProperty('main')) {
+        def mainFile = new File(projectDir, project.getProperty('main'))
+        if (!mainFile.exists()) {
+            throw new Exception("Indicated main file ${mainFile.getPath()} does not exist")
+        }
+        // any other main files in the directory are excluded automatically
+        excludedFiles.addAll(
+                Arrays.<File> stream(projectDir.listFiles())
+                        .filter { f -> f.name.endsWith('.py') }
+                        .filter { f -> f.name.startsWith('main_') }
+                        .filter { f -> !f.equals(mainFile) }
+                        .toList()
+        )
+        return mainFile
+    } else if (new File(projectDir, 'main.py').exists()) {
+        return new File(projectDir, 'main.py')
+    } else {
+        def mainFiles =
+                Stream.concat(
+                        includedFiles.stream(),
+                        Arrays.stream(projectDir.listFiles())
+                )
+                        .filter { f -> f.name.endsWith('.py') }
+                        .filter { f -> !excludedFiles.contains(f) }
+                        .filter { f -> Files.readAllLines(f.toPath()).contains('if __name__ == "__main__":') }
+                        .toList()
+        if (mainFiles.isEmpty()) {
+            throw new Exception("No *.py files found in the project directory looking like a main code block")
+        } else if (mainFiles.size() > 1) {
+            excludedFiles.forEach { logger.lifecycle("Excluded: ${it.getAbsolutePath()}") }
+            logger.lifecycle("Excluded files: ${excludedFiles}")
+            throw new Exception("Multiple *.py files found in the project directory looking like a main code block: $mainFiles, please specify -Pmain={file}")
+        }
+        logger.lifecycle("Detected main code block in file ${mainFiles.getFirst()}")
+        return mainFiles.getFirst()
+    }
+}
