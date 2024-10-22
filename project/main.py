@@ -1,30 +1,86 @@
 # from time import sleep
+import math
+
+from Servo import Servo
 from Task import Task, Step
 from Robot import Robot
-from microbit import button_a, sleep
+from microbit import button_a, sleep, button_b
 
 from Period import Period
 from SensorReader import UltrasoundReader
 
-from StateMain import StateMain
+from MainSM import MainSM
 from SensorReader import SensorReader
-from SMQ import SMQ
+from CPU import CPU
 
 # from StateMain import StateMain
 
 if __name__ == "__main__":
     robot = Robot(0.147, 0.067)
-    stateMain = StateMain(robot, [
+    stateMain = MainSM(robot, [
         Step('init'),
         Task('run'),
     ])
-    SMQ.add(stateMain)
+    CPU.add(stateMain)
     # robot.goPWM(150)
-    # period = Period(200)
+    # period = Period(1000)
     # ul = UltrasoundReader()
+    #
+    # angle = -45
+    # rotate = True
+    # while not button_b.was_pressed():
+    #     pass
+    #
+    # while not button_a.is_pressed():
+    #     robot.move().goPWM(150)
+    #     sleep(1)
+    #     robot.move().goPWM(0)
+    #     sleep(2)
+    #
+    # robot.move().goPWM(80)
+    # while not button_b.is_pressed():
+    #     pass
+
+
 
     while not button_a.was_pressed():
-        SMQ.tick()
+        CPU.tick()
+        # angle += 1 if rotate else -1
+        # Servo.otoc(angle)
+        # sleep(5)
+        # print(ul.getDistance())
+        # if abs(angle) > 45:
+        #     rotate = not rotate
+
+        # min_angle = 45  # degree
+        # distance = 0.6  # meter
+        # dx = math.cos(min_angle) * distance
+        # dy = math.sin(min_angle) * distance
+        # rel_x = dx + 0.07  # 7 cm je sensor predsunut
+        # rel_y = dy + 0
+        # robot_angle_rad = math.atan(rel_y / rel_x)
+        # print('rel_x', rel_x, 'rel_y', rel_y, 'robot_angle_rad', robot_angle_rad)
+        # robot.move().goV(0.3, robot_angle_rad)
+        # sleep(2000)
+        # robot.move().goV(0)
+        # sleep(5000)
+
+        # print('D:', ul.getDistance())
+
+        # for i in range(37, 160):
+        #     print(i)
+        #     Servo.otoc(i)
+        #     sleep(1000)
+        # Servo.otoc(45)
+        # sleep(1000)
+        # sleep(1000)
+        # Servo.otoc(-45)
+        # sleep(2000)
+        # Servo.otoc(-90)
+        # sleep(1000)
+        # CPU.tick()
+        # robot.tick()
+
         # if period.isTime():
         #     data = SensorReader.getSensors()
         #     print('SSS', data[SensorReader.LTL] + data[SensorReader.LTM] + data[SensorReader.LTR],

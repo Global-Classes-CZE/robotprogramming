@@ -3,7 +3,7 @@ from MoveController import MoveController
 
 from Encoder import Encoder
 
-from StateLight import StateLight
+from LightSM import LightSM
 
 
 class Robot:

@@ -24,18 +24,18 @@ class Motor:
         # print('goV omega', omega)
         coef = 1 if omega > 0 else -1
 
-        pwm = int(self.__a * omega + self.__b * coef)
+        pwm = int(self.__a * omega + self.__b * coef)  # uhlova rychlost na PWM
 
         pwm_original = pwm
         pwm_max = 75
-        pwm_min = 50
+        pwm_min = 40
 
         pwm = pwm_max if pwm_min < pwm <= pwm_max else pwm
         pwm = 0 if -pwm_min < pwm <= pwm_min else pwm
         pwm = -pwm_max if -pwm_max < pwm <= -pwm_min else pwm
 
-        self.__pwm = max(min(pwm, 200), -200)  # uhlova rychlost na PWM
-        print('v', v, 'omega', omega, 'a', self.__a, 'b', self.__b, 'pwm', self.__pwm, 'pwmOrig', pwm_original)
+        self.__pwm = max(min(pwm, 200), -200)
+        # print('v', v, 'omega', omega, 'a', self.__a, 'b', self.__b, 'pwm', self.__pwm, 'pwmOrig', pwm_original)
         # print('goV pwm', self.__pwm)
         self.__goPWM(self.__pwm)
 

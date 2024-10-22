@@ -1,9 +1,9 @@
 from Period import Period
 from Task import Task
-from SMQ import SMQ
+from CPU import CPU
 
 
-class StateAbstract:
+class AbstractSM:
     STATE_START = 'start'
     STATE_END = 'end'
 
@@ -13,7 +13,7 @@ class StateAbstract:
         self.__periodQueue = Period()
         self.__stack = []
         self.__curTask = None  # type: Task | None
-        self.__smq_no = None  # type: int | None
+        self.__cpu_no = None  # type: int | None
         self.__ntid = None  # Next Time ID
         self.__running = False
         self.__tic = 0  # task id counter
@@ -27,28 +27,28 @@ class StateAbstract:
         self.__cleanSelf()
 
     def __cleanSelf(self):
-        parent = SMQ.parentOf(self.__smq_no)
+        parent = CPU.parentOf(self.__cpu_no)
         if parent:
-            parent.smq_child_done(self.__smq_no)
-        SMQ.remove(self.__smq_no)
+            parent.cpu_child_done(self.__cpu_no)
+        CPU.remove(self.__cpu_no)
 
-    def add2SMQ(self, sm: 'StateAbstract') -> 'StateAbstract':
+    def add2CPU(self, sm: 'AbstractSM') -> 'AbstractSM':
         # prida noveho potomka do SQM
-        return SMQ.add(sm, self.__smq_no)
+        return CPU.add(sm, self.__cpu_no)
 
     def run(self):
         self.__period.reset()
         self.__running = True
         self.nextTask()
 
-    def smq_child_done(self, smq_no: int):
+    def cpu_child_done(self, cpu_no: int):
         # bude provolana, kdykoliv se dokonci ukoly v SQM potomkovi
         pass
 
-    def smq_no(self, smq_no: int = None) -> int | None:
-        if smq_no is None:
-            return self.__smq_no
-        self.__smq_no = smq_no
+    def cpu_no(self, cpu_no: int = None) -> int | None:
+        if cpu_no is None:
+            return self.__cpu_no
+        self.__cpu_no = cpu_no
 
     def tick(self):
         if self.__running is False:
@@ -85,7 +85,7 @@ class StateAbstract:
     def __callStep(self, name: str):
         n = '__' + name
         if hasattr(self, n):
-            print('call: ', n)
+            # print('call: ', n)
             fce = getattr(self, n)
             fce()
 
