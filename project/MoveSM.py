@@ -5,9 +5,10 @@ from microbit import sleep
 from Period import Period
 from Servo import Servo
 from Task import Task
-from SensorReader import UltrasoundReader
+from SensorReader import UltrasoundReader, SensorReader
 from AbstractSM import AbstractSM
 from Robot import Robot
+from microbit import display
 
 
 class MoveSM(AbstractSM):
@@ -18,6 +19,26 @@ class MoveSM(AbstractSM):
         self.__counter = 0
 
     __carrotChasingSM = None
+
+    def __lineForward(self):
+        self.__robot.move().goV(0.18)
+        pass
+
+    def __lineForward__tick(self):
+        data = SensorReader.getSensors()
+        display.set_pixel(4, 2, 9 if data[SensorReader.LTL] == '1' else 0)
+        display.set_pixel(0, 2, 9 if data[SensorReader.LTR] == '1' else 0)
+
+        LR = str(data[SensorReader.LTL]) + str(data[SensorReader.LTR])
+        if LR == '10':
+            self.__robot.move().goV(0, 1)
+        elif LR == '01':
+            self.__robot.move().goV(0, -1)
+        elif LR == '00':
+            self.__robot.move().goV(0.18, 0)
+        else:
+            self.__robot.move().goV(0, 0)
+
 
     def __carrotChasing(self):
         self.__carrotChasingSM = CarrotChasingSM(self.__robot, [
@@ -88,7 +109,6 @@ class CarrotChasingSM(AbstractSM):
         pass
 
     __distances = {}
-
 
     def __run__tick(self):
         distance = self.__ul.getDistance() * 1000
