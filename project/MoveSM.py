@@ -49,8 +49,6 @@ class MoveSM(AbstractSM):
 
         v = max(min(v_max, u), v_max * -1)
 
-        # print('y=' + str(y), 'e=' + str(e), 'p=' + str(p), 'u=' + str(u), 'v=' + str(v))
-        print((y, e, u, v))
         skip = y > 2 > self.__lastY
         self.__lastY = y
         if skip:
@@ -58,7 +56,6 @@ class MoveSM(AbstractSM):
             print((5, 5, 5, 5))
             return
 
-        # print((y,))
         self.__robot.move().goV(v)
 
     def __forward(self):
@@ -115,5 +112,4 @@ class CarrotChasingSM(AbstractSM):
             rel_x = dx + 70  # 7 cm je sensor predsunut
             rel_y = dy + 0
             robot_angle_rad = math.atan(rel_y / rel_x)
-            print((robot_angle_rad * 10, direction, distance))
             self.__robot.move().goV(0.05 if distance > 100 else 0, robot_angle_rad)

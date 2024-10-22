@@ -20,8 +20,8 @@ class MainSM(AbstractSM):
     def __run(self):
         sm = MoveSM(self.__robot, [
             Step('stop',1000),
-            # Task('cruiseControl', 250),
-            Task('carrotChasing', 2000),
+            Task('cruiseControl', 250),
+            # Task('carrotChasing', 2000),
             Step('stop'),
             # Step('right'),
         ], 1000)
