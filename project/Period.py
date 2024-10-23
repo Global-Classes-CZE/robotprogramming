@@ -4,7 +4,7 @@ from utime import ticks_ms, ticks_diff
 class Period:
     def __init__(self, tick_time: [int, None] = None):
         self.__tickTime = tick_time
-        self.__lastTime = 0
+        self.__lastTime = ticks_ms()
         self.__lastDiff = 0
 
     def isTime(self) -> bool:

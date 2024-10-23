@@ -1,14 +1,13 @@
 import math
 
-from microbit import sleep
-
+from microbit import display
+from Loc import Loc
 from Period import Period
 from Servo import Servo
-from Task import Task
+from Task import Task, Step
 from SensorReader import UltrasoundReader, SensorReader
 from AbstractSM import AbstractSM
 from Robot import Robot
-from microbit import display
 
 
 class MoveSM(AbstractSM):
@@ -20,14 +19,21 @@ class MoveSM(AbstractSM):
 
     __carrotChasingSM = None
 
+    def __start(self):
+        Loc.add(0, 0)
+
+    __step = 0
+    __periodCross = None
+    __isLeft = False
+
     def __lineForward(self):
         self.__robot.move().goV(0.18)
-        pass
+        Loc.add(1, 0)
 
     def __lineForward__tick(self):
         data = SensorReader.getSensors()
-        display.set_pixel(4, 2, 9 if data[SensorReader.LTL] == '1' else 0)
-        display.set_pixel(0, 2, 9 if data[SensorReader.LTR] == '1' else 0)
+        display.set_pixel(4, 4, 9 if data[SensorReader.LTL] == '1' else 0)
+        display.set_pixel(0, 4, 9 if data[SensorReader.LTR] == '1' else 0)
 
         LR = str(data[SensorReader.LTL]) + str(data[SensorReader.LTR])
         if LR == '10':
@@ -37,8 +43,57 @@ class MoveSM(AbstractSM):
         elif LR == '00':
             self.__robot.move().goV(0.18, 0)
         else:
-            self.__robot.move().goV(0, 0)
+            self.nextTask()
+            # self.setTask(Step('lineForwardCrossRight'))
+            # self.__robot.move().goV(0, 0)
 
+    def __lineCrossRight(self):
+        Loc.add(0, -90)
+        self.__crossDirection = -1
+        self.setTask(Task('lineCross'))
+
+    def __lineCrossLeft(self):
+        Loc.add(0, 90)
+        self.__crossDirection = 1
+        self.setTask(Task('lineCross'))
+
+    def __lineCrossForward(self):
+        Loc.add(0, 0)
+        self.__crossDirection = 0
+        self.setTask(Task('lineCross'))
+
+    def __lineCross(self):
+        self.__step = 0
+        self.setTickTime(400)
+        self.__robot.move().goV(0.18, 0)
+
+    def __lineCross__tick(self):
+        # print('__lineCross__tick', self.__step)
+        if self.__step == 0:
+            print('isTime', self.__crossDirection)
+            if self.__crossDirection == 0:
+                print('ZERO')
+                self.__robot.move().goV(0, 0)
+                self.nextTask()
+            else:
+                print('NOT ZERO')
+                self.setTickTime(600)
+                self.__step = 1
+                self.__robot.move().goV(0, self.__crossDirection * 2.5)
+        elif self.__step == 1:
+            self.setTickTime(50)
+            print('isTime2')
+            self.__step = 2
+        elif self.__step == 2:
+            data = SensorReader.getSensors()
+            display.set_pixel(4, 4, 9 if data[SensorReader.LTL] == '1' else 0)
+            display.set_pixel(0, 4, 9 if data[SensorReader.LTR] == '1' else 0)
+            LR = str(data[SensorReader.LTL]) + str(data[SensorReader.LTR])
+            print('LR', LR, self.__crossDirection)
+            if (LR == '01' and self.__crossDirection == -1) or (LR == '10' and self.__crossDirection == 1):
+                print('nextTask')
+                self.__robot.move().goV(0, 0)
+                self.nextTask()
 
     def __carrotChasing(self):
         self.__carrotChasingSM = CarrotChasingSM(self.__robot, [
@@ -71,12 +126,12 @@ class MoveSM(AbstractSM):
         v = max(min(v_max, u), v_max * -1)
 
         # print('y=' + str(y), 'e=' + str(e), 'p=' + str(p), 'u=' + str(u), 'v=' + str(v))
-        print((y, e, u, v))
+        # print((y, e, u, v))
         skip = y > 2 > self.__lastY
         self.__lastY = y
         if skip:
-            print('SKIP')
-            print((5, 5, 5, 5))
+            # print('SKIP')
+            # print((5, 5, 5, 5))
             return
 
         # print((y,))
@@ -135,5 +190,5 @@ class CarrotChasingSM(AbstractSM):
             rel_x = dx + 70  # 7 cm je sensor predsunut
             rel_y = dy + 0
             robot_angle_rad = math.atan(rel_y / rel_x)
-            print((robot_angle_rad * 10, direction, distance))
+            # print((robot_angle_rad * 10, direction, distance))
             self.__robot.move().goV(0.05 if distance > 100 else 0, robot_angle_rad)

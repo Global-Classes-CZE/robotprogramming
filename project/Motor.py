@@ -59,6 +59,6 @@ class Motor:
         self.__goPWM(pwm)
 
     def __goPWM(self, pwm):
-        print('__goPWM', pwm)
+        # print('__goPWM', pwm)
         I2cAdapter.write(self.__address, self.__addressForward + bytes([pwm if pwm > 0 else 0]))
         I2cAdapter.write(self.__address, self.__addressBack + bytes([pwm * -1 if pwm < 0 else 0]))
