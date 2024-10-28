@@ -4,7 +4,7 @@ from system import System
 from wheel_driver import WheelDriver
 
 if __name__ == "__main__":
-    # Tries to track a line, stop at first indecision (no line for 3 secs, intersection).
+    # Navigates across lines, turns at sharp turns and stops at intersections and asks for user input where to go
     system = System()
     wheels = WheelDriver(
         system=system,
