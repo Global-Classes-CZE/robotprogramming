@@ -86,6 +86,7 @@ class TurnState(State):
 
 
 class LeftTurnState(TurnState):
+    """Turns the car to the left from an empty space, first catching the left side sensor, then the center one."""
     def __init__(self, symbol: str, matchers: list[SensorHistoryStateMatcher]):
         actions = [
             SideSeekTurnAction(symbol=symbol, matching_sensor=0b100, direction=1),
@@ -95,6 +96,7 @@ class LeftTurnState(TurnState):
 
 
 class RightTurnState(TurnState):
+    """Turns the car to the right from an empty space, first catching the right side sensor, then the center one."""
     def __init__(self, symbol: str, matchers: list[SensorHistoryStateMatcher]):
         actions = [
             SideSeekTurnAction(symbol=symbol, matching_sensor=0b001, direction=-1),
@@ -104,6 +106,7 @@ class RightTurnState(TurnState):
 
 
 class OffLineLeftTurnState(TurnState):
+    """Turns the car to the left from a center line, first waiting for an empty space on all sensors, then left side sensor, then the center one."""
     def __init__(self, symbol: str):
         actions = [
             NoCenterSeekTurnAction(symbol=symbol, matching_sensor=0b000, direction=1),
@@ -114,10 +117,28 @@ class OffLineLeftTurnState(TurnState):
 
 
 class OffLineRightTurnState(TurnState):
+    """Turns the car to the right from a center line, first waiting for an empty space on all sensors, then right side sensor, then the center one."""
     def __init__(self, symbol: str):
         actions = [
             NoCenterSeekTurnAction(symbol=symbol, matching_sensor=0b000, direction=-1),
             SideSeekTurnAction(symbol=symbol, matching_sensor=0b001, direction=-1),
+            CenterSeekTurnAction(symbol=symbol, matching_sensor=0b010, direction=-1)
+        ]
+        super().__init__(symbol=symbol, actions=actions, matchers=[])
+
+class ToLineLeftTurnState(TurnState):
+    """Turns the car to the left just waiting for the center sensor to catch the line (disregarding side sensor)."""
+    def __init__(self, symbol: str):
+        actions = [
+            CenterSeekTurnAction(symbol=symbol, matching_sensor=0b010, direction=1)
+        ]
+        super().__init__(symbol=symbol, actions=actions, matchers=[])
+
+
+class ToLineRightTurnState(TurnState):
+    """Turns the car to the right just waiting for the center sensor to catch the line (disregarding side sensor)."""
+    def __init__(self, symbol: str):
+        actions = [
             CenterSeekTurnAction(symbol=symbol, matching_sensor=0b010, direction=-1)
         ]
         super().__init__(symbol=symbol, actions=actions, matchers=[])

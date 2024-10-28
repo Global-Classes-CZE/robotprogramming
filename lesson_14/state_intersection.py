@@ -60,8 +60,8 @@ class IntersectXState(State):
 class IntersectYState(State):
     def __init__(self, symbol: str, matchers: list[SensorHistoryStateMatcher]):
         actions = [InteractiveIntersectAction(symbol=symbol, choices=[
-            Choice(symbol='<', target_state='TURN_L_ONTO_LINE'),
-            Choice(symbol='>', target_state='TURN_R_ONTO_LINE'),
+            Choice(symbol='<', target_state='TURN_L_TO_LINE'),
+            Choice(symbol='>', target_state='TURN_R_TO_LINE'),
         ])]
         super().__init__(symbol=symbol, actions=actions, matchers=matchers)
 

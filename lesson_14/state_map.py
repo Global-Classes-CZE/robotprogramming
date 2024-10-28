@@ -3,6 +3,7 @@ from state_generic import StartState, StopState, ErrorState
 from state_intersection import IntersectXState, IntersectYState, IntersectTState, IntersectLState, IntersectRState
 from state_line import LineState
 from state_turn import LeftTurnState, RightTurnState, OffLineLeftTurnState, OffLineRightTurnState
+from state_turn import ToLineLeftTurnState, ToLineRightTurnState
 
 
 class StateMap:
@@ -31,11 +32,11 @@ class StateMap:
             # Follows the line (no declarative matchers enabled, we transition in and out using advanced conditions)
             'LINE': LineState(symbol='|'),
         }
-        line_transitions = [ 'STOP' ]
+        line_transitions = ['STOP']
         self.transitions = {
-            'START': [ 'LINE', 'STOP' ],
+            'START': ['LINE', 'STOP'],
             'LINE': line_transitions,
-            'STOP': [ 'START' ],
+            'STOP': ['START'],
         }
 
         if turns:
@@ -65,8 +66,8 @@ class StateMap:
             })
             line_transitions.extend(['TURN_L', 'TURN_R'])
             self.transitions.update({
-                'TURN_L': [ 'STOP' ],
-                'TURN_R': [ 'STOP' ],
+                'TURN_L': ['STOP'],
+                'TURN_R': ['STOP'],
             })
 
         if intersections:
@@ -137,16 +138,20 @@ class StateMap:
                 # extra turn operations needed to go off the intersection in the right sensor order
                 'TURN_L_OFF_LINE': OffLineLeftTurnState(symbol='TL'),
                 'TURN_R_OFF_LINE': OffLineRightTurnState(symbol='TR'),
-
+                'TURN_L_TO_LINE': ToLineLeftTurnState(symbol='TL'),
+                'TURN_R_TO_LINE': ToLineRightTurnState(symbol='TR'),
             })
             line_transitions.extend(['INTERSECT_X', 'INTERSECT_Y', 'INTERSECT_T', 'INTERSECT_L', 'INTERSECT_R'])
             self.transitions.update({
-                'INTERSECT_X': [ 'STOP'],
-                'INTERSECT_R': [ 'STOP' ],
-                'INTERSECT_L': [ 'STOP' ],
-                'INTERSECT_T': [ 'STOP' ],
-                'TURN_L_OFF_LINE': [ 'STOP' ],
-                'TURN_R_OFF_LINE': [ 'STOP' ],
+                'INTERSECT_X': ['STOP'],
+                'INTERSECT_Y': ['STOP'],
+                'INTERSECT_R': ['STOP'],
+                'INTERSECT_L': ['STOP'],
+                'INTERSECT_T': ['STOP'],
+                'TURN_L_OFF_LINE': ['STOP'],
+                'TURN_R_OFF_LINE': ['STOP'],
+                'TURN_L_TO_LINE': ['STOP'],
+                'TURN_R_TO_LINE': ['STOP'],
             })
 
         print("Working with states:")
@@ -155,7 +160,6 @@ class StateMap:
         print("Enabled implicit state-to-state transitions:")
         for state, transitions in self.transitions.items():
             print(f"* {state} -> {transitions}")
-
 
     def __str__(self):
         return "StateMap(%s)" % self.states
