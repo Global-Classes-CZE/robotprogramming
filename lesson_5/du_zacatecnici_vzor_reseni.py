@@ -10,7 +10,7 @@ if __name__ == "__main__":
             # prikazem end nastavuji, co se ma stat nakonci vypsaneho retezce
             # v tom to pripade nic - chceme dalsi hvezdicky vypsat za
             print("*", end='')
-        print() # nova radka
+        print()  # nova radka
 
     print()
     # druhe mozne reseni trojuhelnika
