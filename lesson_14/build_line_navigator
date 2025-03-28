@@ -1,0 +1,2 @@
+#!/bin/bash
+./gradlew -Pmain=main_line_navigator.py -Pexclude=light.*,sonar.*,wheel_calibrator.* clean build upload
